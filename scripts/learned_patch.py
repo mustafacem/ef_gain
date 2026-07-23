@@ -64,6 +64,10 @@ PATCH_BITS = 3
 # per-row solve systems stay small: the closed-form solve is O(b^3) in per-row
 # patched width, and high coverage made torch's batched solver crawl.
 PATCH_COVERAGE = float(os.environ.get("SQ_COVERAGE", "0.05"))
+# The solved arm needs the O(b^3) solve, which is slow at high coverage; the
+# learned arm trains and does not, so high coverage is free for it. Skip the
+# solved arm to sweep the learned patch's capacity up toward uniform-4.
+SKIP_SOLVED = os.environ.get("SQ_SKIP_SOLVED", "0") == "1"
 N_CALIB_SEQ = 24
 N_TRAIN_SEQ = int(os.environ.get("SQ_TRAIN_SEQ", "24"))
 N_EVAL_SEQ = 16
@@ -143,6 +147,61 @@ def chunked_nll(model, seqs, dev):
 
 def ppl(pt):
     return math.exp(sum(a for a, _ in pt) / sum(b for _, b in pt))
+
+
+def gsm8k_eval(model, tok, weight_dicts, dev,
+               set_static, restore_static, n_problems=200, n_shot=4):
+    """Exact-match accuracy on GSM8K for each weight config. The decisive
+    check that a perplexity tie is (or is not) an accuracy tie."""
+    import re
+    from datasets import load_dataset
+    tok.padding_side = "left"
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    train = load_dataset("gsm8k", "main", split="train")
+    test = load_dataset("gsm8k", "main", split="test")
+    shots = [(train[i]["question"], train[i]["answer"]) for i in range(n_shot)]
+
+    def gold(a):
+        return float(a.split("####")[-1].strip().replace(",", ""))
+
+    def prompt(q):
+        return "\n\n".join([f"Question: {sq}\nAnswer: {sa}" for sq, sa in shots]
+                           + [f"Question: {q}\nAnswer:"])
+
+    ans_re = re.compile(r"-?[\d,]*\.?\d+")
+
+    def extract(text):
+        text = text.split("Question:")[0]
+        nums = ans_re.findall(text.replace("$", ""))
+        if not nums:
+            return None
+        try:
+            return float(nums[-1].replace(",", ""))
+        except ValueError:
+            return None
+
+    probs = [(test[i]["question"], gold(test[i]["answer"])) for i in range(n_problems)]
+    out = {}
+    model.eval()
+    for tag, wd in weight_dicts.items():
+        saved = set_static(wd)
+        correct = 0
+        for q, g in probs:
+            ids = tok(prompt(q), return_tensors="pt").to(dev)
+            with torch.no_grad():
+                o = model.generate(**ids, max_new_tokens=256, do_sample=False,
+                                   pad_token_id=tok.pad_token_id)
+            gen = tok.decode(o[0][ids["input_ids"].shape[1]:], skip_special_tokens=True)
+            p = extract(gen)
+            correct += (p is not None and abs(p - g) < 1e-4)
+            del o
+        restore_static(saved)
+        out[tag] = correct / len(probs)
+        print(f"    GSM8K {tag}: {100*out[tag]:.1f}%", flush=True)
+        if dev == "cuda":
+            torch.cuda.empty_cache()
+    return out
 
 
 # ---- trainable sparse residual: only selected groups carry parameters ----
@@ -433,10 +492,26 @@ def main():
         row["fp16"] = {"ppl": p_fp16}
         print(f"  fp16                   ppl={p_fp16:.4f}", flush=True)
 
-        score_cfg("solved_obs", solved_patch(masks_obs), used_obs)
+        if not SKIP_SOLVED:
+            score_cfg("solved_obs", solved_patch(masks_obs), used_obs)
         learned_q, learned_fp16 = learned_patch(masks_obs)
         score_cfg("learned_3bit", learned_q, used_obs)
         score_cfg("learned_fp16", learned_fp16, used_obs)  # diagnostic: unquantized
+
+        # optional downstream-accuracy confirmation (perplexity understates
+        # quantization damage ~10x, so a PPL tie is not an accuracy tie until
+        # checked). Compares base / uniform4 / learned on GSM8K exact-match.
+        if os.environ.get("SQ_SAVE_WEIGHTS", "0") == "1":
+            wpath = OUT_PATH.replace(".json", f"_{t}_weights.pt")
+            torch.save({"base_mixed": base_w, "uniform4": uni4, "learned_3bit": learned_q},
+                       wpath)
+            print(f"  saved weights -> {wpath}", flush=True)
+        if os.environ.get("SQ_GSM8K", "0") == "1" and t == "math":
+            acc = gsm8k_eval(model, tok,
+                             {"base_mixed": base_w, "uniform4": uni4, "learned_3bit": learned_q},
+                             dev, set_static, restore_static)
+            row["gsm8k"] = acc
+            print(f"  GSM8K acc: {acc}", flush=True)
 
         results["tasks"][t] = row
         del H_t

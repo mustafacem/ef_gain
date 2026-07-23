@@ -74,3 +74,39 @@ SQ_TASKS=math SQ_EPOCHS=4 SQ_TRAIN_SEQ=24 SQ_TRAIN_TOK=160 \
   SQ_COVERAGE=0.05 SQ_LR=3e-4 python scripts/learned_patch.py
 # code: same with SQ_TASKS=code SQ_OUT=results/learned_patch_code.json
 ```
+
+---
+
+## UPDATE: the perplexity win is a MIRAGE (GSM8K reversal)
+
+Pushing the learned patch to convergence (128 seqs, 12 epochs) drove math to
+**perplexity parity with uniform-4 at 19% lower memory**: learned 4.77 @ 3.43
+b/w vs uniform-4 4.73 @ 4.25 b/w. On perplexity, the breakthrough looked real.
+
+**GSM8K accuracy destroys it:**
+
+| config (math) | bits/w | perplexity | GSM8K acc |
+|---|---|---|---|
+| base (mixed) | 3.37 | 5.51 | 12.5% |
+| learned patch | 3.43 | **4.77** | **8.5%** |
+| uniform-4 | 4.25 | 4.73 | 23.5% |
+| fp16 | - | 4.49 | 34.5% |
+
+The learned patch scores **8.5%** GSM8K -- **below the unpatched base (12.5%)**
+and far below uniform-4 (23.5%), p=0.000. KL distillation lowered perplexity by
+matching the teacher's output distribution on calibration text while destroying
+the reasoning GSM8K needs. **Training harder for lower perplexity made accuracy
+worse.**
+
+Harness validated: base=12.5% and uniform-4=23.5% match prior independent
+measurements exactly, so 8.5% is trustworthy.
+
+**Conclusion:** learned patches are NOT a win. They are the sharpest instance of
+this project's central finding -- perplexity did not merely understate damage,
+it pointed the opposite way. Code never even reached perplexity parity (7.37 vs
+5.47), confirming the effect is also task-dependent (only lightly-damaged bases
+reach perplexity parity, and even that parity is hollow on accuracy).
+
+The KL-only objective is the likely culprit; a task-loss-aligned objective is
+untested and might behave differently. But as tested, the learned patch fails
+harder than the restored one on the metric that matters.

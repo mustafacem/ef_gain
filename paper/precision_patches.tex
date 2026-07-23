@@ -61,11 +61,12 @@ sub-integer-\bpw{} gaps that integer-only uniform quantization cannot occupy
 (3.25--5.25 \bpw{}). \textbf{(4)} The single robust practical win is a cheap
 mixed-precision base (one extra bit on attention, $\approx$12\% of the
 weights); a small patch on top ties uniform 4-bit at lower memory on both
-perplexity and GSM8K accuracy. \textbf{(5)} Replacing restoration with an
-end-to-end \emph{learned} (distillation-trained) patch breaks a real ceiling:
-it beats the restored patch on both tasks and closes up to 66\% of the
-base$\to$uniform-4 gap, though it still does not surpass uniform-4's absolute
-quality, and it moves the method from training-free to QLoRA-adjacent. Finally, we report a methodological finding
+perplexity and GSM8K accuracy. \textbf{(5)} A cautionary
+result: an end-to-end \emph{learned} (distillation-trained) patch reaches
+\emph{perplexity} parity with uniform-4 at 19\% lower memory, yet collapses on
+GSM8K accuracy (8.5\% vs.\ uniform-4's 23.5\%, below even the unpatched base) --
+optimising perplexity actively harmed task capability, the starkest instance
+of the metric finding below. Indeed, this is a methodological finding
 with broad relevance: \textbf{perplexity understates quantization damage by
 roughly an order of magnitude relative to downstream accuracy}
 (a $+2.8\%$ perplexity increase costs $-31.9\%$ GSM8K accuracy), so
@@ -467,72 +468,82 @@ The unifying explanation for the pattern is that, at a fixed byte budget,
 precision (fp16 patches, iteration, 2-bit patches) lost; every idea that bought
 coverage (3-bit patches, bitmap) won.
 
-\section{Learned patches partially break the restoration ceiling}
+\section{Learned patches: a perplexity mirage}
 \label{sec:learned}
 
 Every patch above only \emph{restores} information already present in the fp16
 model: the closed-form solve reconstructs each layer's output locally, so a
-patch can at best claw the quantized model back toward fp16, group by group.
-This is a hard ceiling. A patch \emph{trained} end-to-end against the fp16
-teacher can, in principle, do something restoration cannot: compensate for
-quantization error that propagates \emph{across} layers, since the loss is
-computed on the final logits rather than one layer's output. We test whether
-this changes the verdict.
+patch can at best claw the quantized model back toward fp16. A patch
+\emph{trained} end-to-end against the fp16 teacher can, in principle, do more:
+compensate for error propagating \emph{across} layers, since the loss is on the
+final logits. We test this---and it produces the sharpest cautionary result in
+the paper.
 
 \paragraph{Setup.} On the mixed attention@4/MLP@3 base (frozen), we place a
 sparse trainable residual on the top-$5\%$ \code{down\_proj} groups (OBS
 selection; Fisher/task-loss-gradient selection was tried and found
-\emph{worse}, consistent with Sec.~\ref{sec:negative}). The residual is trained
-for 4 epochs with a distillation loss $\mathrm{KL}(p_\text{fp16}\,\|\,p_\text{student})$
-on task calibration text, then \emph{quantized to 3 bits} and stored exactly
-like a solved patch, at identical bytes. This is deliberately the simplest
-learned variant---no task labels, no hidden-state matching, no joint
-optimization of base and patch---so any gain is attributable to end-to-end
-training alone.
+\emph{worse}). The residual is trained with a distillation loss
+$\mathrm{KL}(p_\text{fp16}\,\|\,p_\text{student})$ on task calibration text
+(up to 128 sequences, 12 epochs), then quantized to 3 bits and stored exactly
+like a solved patch, at identical bytes.
 
-\paragraph{Result.} Table~\ref{tab:learned} compares the learned patch against
-the solved (restoration) patch at matched memory (3.43 \bpw{}).
+\paragraph{Perplexity says: breakthrough.} Trained to convergence on math, the
+learned patch reaches \emph{perplexity parity} with uniform-4 at 19\% lower
+memory (Table~\ref{tab:learned}, 4.77 vs.\ 4.73 at 3.43 vs.\ 4.25 \bpw{}). It
+beats the restored patch decisively, quantizing the trained delta to 3 bits is
+free ($<0.02$ ppl), and the improvement grows monotonically with training data
+($5.11 \to 4.97 \to 4.77$). By every perplexity measure this is the win the
+whole method was after.
+
+\paragraph{Accuracy says: worse than doing nothing.} It is not. On GSM8K
+exact-match (200 problems, 4-shot), the same learned patch scores
+\textbf{8.5\%}---below the unpatched base (12.5\%) and far below uniform-4
+(23.5\%), $p{=}0.000$. The KL distillation lowered perplexity by matching the
+teacher's output \emph{distribution} on calibration text while \emph{destroying}
+the reasoning GSM8K requires; training \emph{harder} for lower perplexity made
+task accuracy \emph{worse}.
 
 \begin{table}[t]
 \centering
-\caption{Learned vs.\ solved patches (perplexity, matched 3.43 \bpw{}). The
-learned patch beats restoration on both tasks and, on math, turns a patch that
-\emph{hurt} (solved $5.97 >$ base $5.85$) into one that closes 66\% of the
-base$\to$uniform-4 gap. It still does not reach uniform-4's absolute quality.}
+\caption{The learned patch reaches perplexity parity with uniform-4 at lower
+memory, yet collapses on GSM8K accuracy---below even the unpatched base. This
+is the perplexity/accuracy divergence of Sec.~\ref{sec:caveats} in its most
+extreme form: on perplexity the learned patch looks like a clear win; on
+accuracy it is worse than doing nothing. (Base and uniform-4 accuracies match
+the independent measurements of Sec.~\ref{sec:frontier} exactly.)}
 \label{tab:learned}
-\begin{tabular}{lrrrrr}
+\begin{tabular}{lrrr}
 \toprule
-task & base & solved & \textbf{learned} & uniform-4 & fp16 \\
-     & (3.37b) & (3.43b) & \textbf{(3.43b)} & (4.25b) & \\
+config (math) & \bpw{} & perplexity & GSM8K acc. \\
 \midrule
-math & 5.85 & 5.97 & \textbf{5.11} & 4.73 & 4.49 \\
-code & 8.02 & 7.87 & \textbf{7.67} & 5.47 & 4.94 \\
+base (mixed attn@4/MLP@3) & 3.37 & 5.51 & 12.5\% \\
+solved (restored) patch & 3.43 & 5.97 & --- \\
+\textbf{learned patch} & \textbf{3.43} & \textbf{4.77} & \textbf{8.5\%} \\
+uniform-4 & 4.25 & 4.73 & 23.5\% \\
+fp16 & --- & 4.49 & 34.5\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Four observations. \textbf{(1)} Learning beats restoration on both tasks
-($+0.86$ ppl on math, $+0.20$ on code); on math the solved patch was actively
-harmful while the learned patch closes 66\% of the gap to uniform-4.
-\textbf{(2)} The benefit is strongly task-dependent (66\% vs.\ 14\% of the gap),
-mirroring where task conditioning was strongest in Sec.~\ref{sec:atlas}.
-\textbf{(3)} Quantizing the trained delta to 3 bits is free: the 3-bit and
-fp16 learned patches differ by $<0.02$ ppl, refuting the concern that a
-continuously-trained correction cannot be stored cheaply. \textbf{(4)}
-Nevertheless, the learned patch still does not beat uniform-4 on absolute
-quality ($5.11$ vs.\ $4.73$; $7.67$ vs.\ $5.47$). The frontier verdict stands;
-what changes is that a \emph{learned} patch is a materially better point on the
-sub-integer-bit frontier than a \emph{restored} one.
+The lesson is not that learned patches are inherently useless---a
+distillation objective aligned with the downstream task, rather than raw KL on
+generic text, might behave differently. It is that \emph{a perplexity-optimised
+patch can be actively harmful to task capability}, and that any patch method
+optimised or evaluated on perplexity alone---including, potentially, some in
+the broader quantization literature---may report gains that reverse under
+accuracy. It is the strongest possible vindication of Sec.~\ref{sec:caveats}:
+here perplexity did not merely understate damage, it pointed the opposite way.
 
-\paragraph{Scope.} This shifts the problem setting from training-free PTQ to a
-QLoRA-adjacent trained residual; the comparison to uniform quantization remains
-fair (matched bits), but ``no additional training'' is no longer a property of
-the method. The result is two tasks, single seed, 0.5B, \code{down\_proj} only,
-under a 6\,GB training budget. It establishes that end-to-end learning escapes
-the restoration ceiling; whether the richer directions it opens---joint
-base/patch optimization, activation quantization, or input-conditional
-precision, none of which we tested---can close the remaining gap to uniform-4
-is left open.
+\paragraph{Scope.} This trains a residual (QLoRA-adjacent), so ``no additional
+training'' is no longer a property of the method; the comparison to uniform
+quantization remains fair (matched bits). The result is single seed, 0.5B,
+\code{down\_proj} only, under a 6\,GB training budget. We tested the simplest
+KL-only variant; a task-loss-aligned distillation objective, joint base/patch
+optimization, activation quantization, and input-conditional precision are all
+untested, and one of them may yet yield a learned patch whose perplexity gain
+survives on accuracy. What this experiment establishes is narrower and, we
+think, more useful as a warning than as a method: end-to-end perplexity
+distillation can buy a perplexity win that is an accuracy loss.
 
 \section{Measurement Caveats}
 \label{sec:caveats}
