@@ -1,0 +1,67 @@
+{
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "mixed_bits": 3.373076923076923,
+  "uni4_bits": 4.25,
+  "tasks": {
+    "math": {
+      "base_mixed": {
+        "ppl": 5.852736961907994,
+        "bits": 3.373076923076923
+      },
+      "uniform4": {
+        "ppl": 4.725637681176806,
+        "bits": 4.25
+      },
+      "fp16": {
+        "ppl": 4.492287536332493
+      },
+      "solved_obs": {
+        "ppl": 5.972275569133964,
+        "bits": 3.42838872553228
+      },
+      "learned_3bit": {
+        "ppl": 5.112923514291749,
+        "bits": 3.42838872553228
+      },
+      "learned_fp16": {
+        "ppl": 5.114006841844409,
+        "bits": 3.42838872553228
+      }
+    },
+    "code": {
+      "base_mixed": {
+        "ppl": 8.019748804903053,
+        "bits": 3.373076923076923
+      },
+      "uniform4": {
+        "ppl": 5.471112465819083,
+        "bits": 4.25
+      },
+      "fp16": {
+        "ppl": 4.9382310646829986
+      },
+      "solved_obs": {
+        "ppl": 7.86686193193344,
+        "bits": 3.42838872553228
+      },
+      "learned_3bit": {
+        "ppl": 7.668473266362153,
+        "bits": 3.42838872553228
+      },
+      "learned_fp16": {
+        "ppl": 7.689386757069717,
+        "bits": 3.42838872553228
+      }
+    }
+  },
+  "config": {
+    "coverage_downproj": 0.05,
+    "patch_bits": 3,
+    "epochs": 4,
+    "train_seqs": 24,
+    "train_tok": 160,
+    "lr": 0.0003,
+    "patch_surface": "mlp.down_proj",
+    "distill": "KL(fp16||student)"
+  }
+}
