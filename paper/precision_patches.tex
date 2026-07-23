@@ -48,10 +48,14 @@ Our results are mixed and, we argue, more informative than a single positive
 headline would be. \textbf{(1)} Weight sensitivity is genuinely
 task-dependent, measured against a split-half noise ceiling; MLP layers carry
 substantially more task-specific structure than attention. \textbf{(2)} The
-patch \emph{mechanism} is real: task-matched patches beat per-layer-type mixed
+patch \emph{mechanism} is real: patches beat per-layer-type mixed
 precision by roughly $2\times$ at matched memory ($p{=}1.000$ on all four
 tasks), and storing corrections at 3 bits rather than \code{fp16} is worth
-$2.13\times$. \textbf{(3)} Nevertheless, uniform quantization remains the
+$2.13\times$. However, the \emph{task}-conditioning does not pay: mismatched
+patches transfer nearly as well as matched ones (a math patch on code beats
+code's own patch), and a single universal patch matches task-specific ones---so
+the ``swappable per-task'' motivation is not supported, even though sensitivity
+is task-dependent. \textbf{(3)} Nevertheless, uniform quantization remains the
 better use of a bit on absolute quality; patches win only by filling the
 sub-integer-\bpw{} gaps that integer-only uniform quantization cannot occupy
 (3.25--5.25 \bpw{}). \textbf{(4)} The single robust practical win is a cheap
@@ -87,10 +91,14 @@ quantization sensitivity is task-dependent enough to make this worthwhile.
 
 We study this question exhaustively and report an honest, nuanced answer. The
 mechanism works and is statistically decisive against strong null hypotheses,
-but it does not beat the simplest baseline---spending the same bits
-uniformly---on absolute quality. Its genuine value is narrow and geometric:
-integer-only uniform quantization cannot occupy the memory band between
-consecutive bit-widths, and patches (together with mixed precision) fill it.
+but two things it is widely assumed to deliver, it does not. It does not beat
+the simplest baseline---spending the same bits uniformly---on absolute quality.
+And the \emph{task} conditioning, the premise of swappability, does not pay: a
+single universal patch works as well as per-task ones, and mismatched patches
+transfer nearly as well as matched ones. What genuine value remains is narrow
+and geometric: integer-only uniform quantization cannot occupy the memory band
+between consecutive bit-widths, and patches (together with mixed precision)
+fill it.
 
 Along the way we surface two measurement findings that we believe matter
 beyond this paper: perplexity dramatically understates the downstream damage
@@ -278,6 +286,51 @@ layers (mean cross-task overlap $0.750$ vs.\ $0.492$). Task-specific structure
 concentrates in the MLP. This foreshadows Sec.~\ref{sec:vsmixed}, where
 much of the patch benefit turns out to coincide with a coarse
 attention-vs-MLP precision split.
+
+\subsection{Task conditioning barely pays: a universal patch suffices}
+\label{sec:crosstask}
+Sensitivity being task-dependent (above) does not imply that a task-\emph{matched}
+patch outperforms a task-agnostic one. We test this directly---the natural
+expectation being that, say, a math patch should transfer poorly to code. It
+does not. Table~\ref{tab:crosstask} evaluates each fully self-contained patch
+(mask \emph{and} values from one task's calibration) on every task. Off-diagonal
+(mismatched) entries are not systematically worse than the diagonal; on the code
+column, the math and chat patches (6.352, 6.320) in fact edge out code's own
+patch (6.467). Averaged over the grid, a single \emph{pooled} patch built from
+generic mixed-task data wins as often as any task-specific patch, and a
+task-matched patch beats the pooled patch significantly only in a narrow regime
+(3-bit base, small budgets $k\!\in\!\{1,2\}\%$, on math/knowledge/chat; never
+convincingly on code).
+
+\begin{table}[t]
+\centering
+\caption{Cross-task patch transfer (perplexity, OBS mask, $k{=}5\%$; rows =
+task the patch was built from, columns = evaluation task; lower is better).
+Mismatched patches perform on par with matched ones---a math patch on code
+(6.352) beats code's own patch (6.467). Task conditioning's \emph{payoff} is
+weak even though sensitivity is task-dependent, so a single universal patch
+suffices and the ``swappable per-task'' motivation is not supported.}
+\label{tab:crosstask}
+\begin{tabular}{lrrrr}
+\toprule
+patch $\backslash$ eval & code & math & knowledge & chat \\
+\midrule
+code            & 6.467 & 6.606 & 8.176 & 31.813 \\
+math            & 6.352 & 6.505 & 7.964 & 31.316 \\
+knowledge       & 6.377 & 6.524 & 7.931 & 31.514 \\
+chat            & 6.320 & 6.597 & 8.173 & 31.012 \\
+pooled (univ.)  & 6.513 & 6.489 & 7.900 & 31.155 \\
+\midrule
+base (no patch) & 6.102 & 6.770 & 8.587 & 32.444 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This is the study's most direct negative result about the original motivation:
+a shared base plus \emph{one} universal patch captures essentially all the
+benefit, so there is little reason to ship or swap per-task patches. The
+mechanism is task-conditional in its \emph{scoring} (Sec.~\ref{sec:atlas}) but
+not, in practice, in its \emph{payoff}.
 
 \subsection{The Pareto frontier, measured in accuracy}
 \label{sec:frontier}
