@@ -1,0 +1,94 @@
+{
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "n_calib_used": 64,
+  "layers": [
+    "layer0.mlp.down_proj",
+    "layer0.self_attn.o_proj",
+    "layer12.mlp.down_proj",
+    "layer12.self_attn.o_proj",
+    "layer18.mlp.down_proj",
+    "layer18.self_attn.o_proj",
+    "layer23.mlp.down_proj",
+    "layer23.self_attn.o_proj",
+    "layer6.mlp.down_proj",
+    "layer6.self_attn.o_proj"
+  ],
+  "overlap_matrix_awq": {
+    "code": {
+      "code": 1.0,
+      "math": 0.8048343777976723,
+      "knowledge": 0.6531365313653137,
+      "chat": 0.7135571610709732
+    },
+    "math": {
+      "code": 0.8048343777976723,
+      "math": 1.0,
+      "knowledge": 0.7084745762711865,
+      "chat": 0.696969696969697
+    },
+    "knowledge": {
+      "code": 0.6531365313653137,
+      "math": 0.7084745762711865,
+      "knowledge": 1.0,
+      "chat": 0.7630083078268474
+    },
+    "chat": {
+      "code": 0.7135571610709732,
+      "math": 0.696969696969697,
+      "knowledge": 0.7630083078268474,
+      "chat": 1.0
+    }
+  },
+  "overlap_matrix_fisher": {
+    "code": {
+      "code": 1.0,
+      "math": 0.13131313131313133,
+      "knowledge": 0.4252386002120891,
+      "chat": 0.418220189940204
+    },
+    "math": {
+      "code": 0.13131313131313133,
+      "math": 1.0,
+      "knowledge": 0.10647639956092206,
+      "chat": 0.11844660194174757
+    },
+    "knowledge": {
+      "code": 0.4252386002120891,
+      "math": 0.10647639956092206,
+      "knowledge": 1.0,
+      "chat": 0.5232338496411031
+    },
+    "chat": {
+      "code": 0.418220189940204,
+      "math": 0.11844660194174757,
+      "knowledge": 0.5232338496411031,
+      "chat": 1.0
+    }
+  },
+  "split_half_noise_ceiling_awq": 0.9697117733268197,
+  "random_floor": 0.005025125628140704,
+  "go_no_go_signal": 0.2463816647765379,
+  "verdict": "GO \u2014 full speed ahead",
+  "per_layer_code_vs_chat_awq": {
+    "layer0.mlp.down_proj": 0.6,
+    "layer0.self_attn.o_proj": 0.5949367088607594,
+    "layer12.mlp.down_proj": 0.47186147186147187,
+    "layer12.self_attn.o_proj": 0.8529411764705882,
+    "layer18.mlp.down_proj": 0.24087591240875914,
+    "layer18.self_attn.o_proj": 0.7746478873239436,
+    "layer23.mlp.down_proj": 0.6385542168674698,
+    "layer23.self_attn.o_proj": 0.8260869565217391,
+    "layer6.mlp.down_proj": 0.5111111111111111,
+    "layer6.self_attn.o_proj": 0.7027027027027027
+  },
+  "mean_attn_overlap": 0.7502630863759466,
+  "mean_mlp_overlap": 0.49248054244976236,
+  "e1_proxy_spearman": {
+    "code__layer12.mlp.down_proj__awq": 0.06869565217391303,
+    "code__layer12.mlp.down_proj__fisher": -0.08782608695652173,
+    "code__layer12.self_attn.o_proj__awq": 0.43304347826086953,
+    "code__layer12.self_attn.o_proj__fisher": -0.08608695652173912,
+    "math__layer12.mlp.down_proj__awq": 0.09652173913043478,
+    "math__layer12.mlp.down_proj__fisher": 0.13130434782608694
+  }
+}

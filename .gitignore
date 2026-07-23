@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# Raw run logs (regenerable stdout, ~16M)
+results/logs/
+results/queue_progress.txt
+*.log
+
+# Large regenerable artifacts (rebuild with the scripts noted in README)
+#   calibration_longform/*.pt : scripts/build_longform_calibration.py
+#   calibration_data/*.jsonl  : scripts/build_calibration_manifests.py
+#   patches/*.safetensors     : scripts/build_and_eval_patches.py
+results/calibration_longform/
+results/calibration_data/
+results/patches/
+
+# Kept in-repo: results/*.json (experiment outputs), results/report/*.md (findings)

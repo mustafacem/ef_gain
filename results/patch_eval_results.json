@@ -1,0 +1,68 @@
+{
+  "patch_sizes_mb": {
+    "code": 0.532224,
+    "math": 0.532224,
+    "knowledge": 0.532224,
+    "chat": 0.532224,
+    "agnostic": 0.532224,
+    "random": 0.532224
+  },
+  "ppl": {
+    "code": {
+      "fp16": 5.359639884358814,
+      "base_3bit": 5.641937242541062,
+      "base+own_patch": 5.655283363671711,
+      "base+math_patch": 5.64731925583209,
+      "base+knowledge_patch": 5.6363128858509235,
+      "base+chat_patch": 5.620378412849214,
+      "base+agnostic_patch": 5.6426089816752585,
+      "base+random_patch": 5.656552678322693,
+      "uniform_4bit": 5.357074122244525
+    },
+    "math": {
+      "fp16": 5.282483913674469,
+      "base_3bit": 5.4113712704383,
+      "base+own_patch": 5.340730877925756,
+      "base+code_patch": 5.38597605669716,
+      "base+knowledge_patch": 5.3452452786085445,
+      "base+chat_patch": 5.375877096451288,
+      "base+agnostic_patch": 5.354063759074404,
+      "base+random_patch": 5.4082923743636995,
+      "uniform_4bit": 5.441648224617715
+    },
+    "knowledge": {
+      "fp16": 6.885995001324885,
+      "base_3bit": 7.089756548293407,
+      "base+own_patch": 7.009684062512118,
+      "base+code_patch": 7.039585967467124,
+      "base+math_patch": 7.008641661901823,
+      "base+chat_patch": 7.057838570714992,
+      "base+agnostic_patch": 7.011224435264528,
+      "base+random_patch": 7.072423511965738,
+      "uniform_4bit": 6.8798081707996905
+    },
+    "chat": {
+      "fp16": 24.644287634103954,
+      "base_3bit": 25.8103844823814,
+      "base+own_patch": 26.090698311348422,
+      "base+code_patch": 25.983929816788915,
+      "base+math_patch": 26.014698724287843,
+      "base+knowledge_patch": 26.026517200627378,
+      "base+agnostic_patch": 26.08900524733013,
+      "base+random_patch": 25.93298923243664,
+      "uniform_4bit": 24.690228349163675
+    }
+  },
+  "swap_latency_ms_repr_layer": 0.014236000424716622,
+  "memory_summary": {
+    "n_weights_10_layers": 25804800,
+    "fp16_bits_per_weight": 16.0,
+    "base_3bit_bits_per_weight": 3.25,
+    "uniform_4bit_bits_per_weight": 4.25,
+    "effective_bits_with_1pct_patch": 3.3775,
+    "base_size_mb": 10.4832,
+    "uniform_4bit_size_mb": 13.7088,
+    "fp16_size_mb": 51.6096,
+    "avg_patch_size_mb": 0.532224
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "task": "knowledge",
+  "n_calib": 150,
+  "n_eval": 100,
+  "seed": 0,
+  "calib_hash": "990d42c5e97ac93a",
+  "eval_hash": "222ebb060c9eeeb8",
+  "ngram_overlap_ratio": 0.0005908419497784342
+}

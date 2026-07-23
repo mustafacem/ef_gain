@@ -1,0 +1,113 @@
+{
+  "layer14.self_attn.o_proj": {
+    "3bit": {
+      "sparse_pb3_bf5": {
+        "coverage": 0.2199657206632653,
+        "frac_removed": 0.4399552847571657
+      },
+      "sparse_pb4_bf5": {
+        "coverage": 0.17365872130102042,
+        "frac_removed": 0.44622871046228707
+      },
+      "sparse_pb16_bf5": {
+        "coverage": 0.049994021045918366,
+        "frac_removed": 0.24520647756698444
+      },
+      "lowrank_r92_bf5": {
+        "frac_removed": 0.23295539459060977
+      },
+      "uniform_next_bit_frac_removed": 0.7857919270557004
+    },
+    "4bit": {
+      "sparse_pb3_bf5": {
+        "coverage": 0.2199657206632653,
+        "frac_removed": 0.439179430534994
+      },
+      "sparse_pb4_bf5": {
+        "coverage": 0.17365872130102042,
+        "frac_removed": 0.4460777203671058
+      },
+      "sparse_pb16_bf5": {
+        "coverage": 0.049994021045918366,
+        "frac_removed": 0.24637845649928547
+      },
+      "lowrank_r92_bf5": {
+        "frac_removed": 0.2341196678649473
+      }
+    }
+  },
+  "layer21.self_attn.o_proj": {
+    "3bit": {
+      "sparse_pb3_bf5": {
+        "coverage": 0.2199657206632653,
+        "frac_removed": 0.40850010072588083
+      },
+      "sparse_pb4_bf5": {
+        "coverage": 0.17365872130102042,
+        "frac_removed": 0.3966750277632527
+      },
+      "sparse_pb16_bf5": {
+        "coverage": 0.049994021045918366,
+        "frac_removed": 0.20841922911610677
+      },
+      "lowrank_r92_bf5": {
+        "frac_removed": 0.1651782266281412
+      },
+      "uniform_next_bit_frac_removed": 0.7860808468828431
+    },
+    "4bit": {
+      "sparse_pb3_bf5": {
+        "coverage": 0.2199657206632653,
+        "frac_removed": 0.4065506085647487
+      },
+      "sparse_pb4_bf5": {
+        "coverage": 0.17365872130102042,
+        "frac_removed": 0.3949924084518103
+      },
+      "sparse_pb16_bf5": {
+        "coverage": 0.049994021045918366,
+        "frac_removed": 0.2074471285895393
+      },
+      "lowrank_r92_bf5": {
+        "frac_removed": 0.1655225232361549
+      }
+    }
+  },
+  "layer7.self_attn.o_proj": {
+    "3bit": {
+      "sparse_pb3_bf5": {
+        "coverage": 0.2199657206632653,
+        "frac_removed": 0.40809145587591633
+      },
+      "sparse_pb4_bf5": {
+        "coverage": 0.17365872130102042,
+        "frac_removed": 0.37721479829544213
+      },
+      "sparse_pb16_bf5": {
+        "coverage": 0.049994021045918366,
+        "frac_removed": 0.17720584134292916
+      },
+      "lowrank_r92_bf5": {
+        "frac_removed": 0.1505676157649828
+      },
+      "uniform_next_bit_frac_removed": 0.7858574592235774
+    },
+    "4bit": {
+      "sparse_pb3_bf5": {
+        "coverage": 0.2199657206632653,
+        "frac_removed": 0.40957034800451286
+      },
+      "sparse_pb4_bf5": {
+        "coverage": 0.17365872130102042,
+        "frac_removed": 0.37861814340629585
+      },
+      "sparse_pb16_bf5": {
+        "coverage": 0.049994021045918366,
+        "frac_removed": 0.17781334772106683
+      },
+      "lowrank_r92_bf5": {
+        "frac_removed": 0.15081716468218087
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "n_eval_raw": 100,
+  "n_eval_clean": 80,
+  "dropped": 20,
+  "res": {
+    "awq|k2|raw": {
+      "code_ppl": 5.820634769217729,
+      "pooled_ppl": 5.856678800403001,
+      "p_own_beats_pooled": 1.0
+    },
+    "awq|k2|clean": {
+      "code_ppl": 6.02818078156011,
+      "pooled_ppl": 6.059882516046329,
+      "p_own_beats_pooled": 0.9995
+    },
+    "awq|k5|raw": {
+      "code_ppl": 5.723557714942038,
+      "pooled_ppl": 5.827871667005941,
+      "p_own_beats_pooled": 1.0
+    },
+    "awq|k5|clean": {
+      "code_ppl": 5.9279489571317034,
+      "pooled_ppl": 6.032437809994409,
+      "p_own_beats_pooled": 1.0
+    },
+    "obs|k2|raw": {
+      "code_ppl": 6.179958695485913,
+      "pooled_ppl": 6.271747095597016,
+      "p_own_beats_pooled": 1.0
+    },
+    "obs|k2|clean": {
+      "code_ppl": 6.409277722754911,
+      "pooled_ppl": 6.498955792155584,
+      "p_own_beats_pooled": 1.0
+    },
+    "obs|k5|raw": {
+      "code_ppl": 6.2592588680263805,
+      "pooled_ppl": 6.294930537928668,
+      "p_own_beats_pooled": 0.996
+    },
+    "obs|k5|clean": {
+      "code_ppl": 6.492761324372767,
+      "pooled_ppl": 6.524171323887543,
+      "p_own_beats_pooled": 0.9785
+    }
+  }
+}

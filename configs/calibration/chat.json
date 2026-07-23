@@ -1,0 +1,9 @@
+{
+  "task": "chat",
+  "n_calib": 150,
+  "n_eval": 100,
+  "seed": 0,
+  "calib_hash": "f83154a26abbfc5f",
+  "eval_hash": "d0783e6989b74d9e",
+  "ngram_overlap_ratio": 7.970667941973537e-05
+}

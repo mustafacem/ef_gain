@@ -1,0 +1,322 @@
+{
+  "layer7.mlp.down_proj": {
+    "2bit": {
+      "k1": {
+        "bytes": 283800,
+        "rank_equiv": 13,
+        "err_base": 58.723228454589844,
+        "sparse_frac_removed": 0.08853599682264623,
+        "lowrank_frac_removed": 0.05847287199081297,
+        "hybrid_frac_removed": 0.07834270130418841
+      },
+      "k2": {
+        "bytes": 567600,
+        "rank_equiv": 27,
+        "err_base": 58.723228454589844,
+        "sparse_frac_removed": 0.15626056016061385,
+        "lowrank_frac_removed": 0.09884544192774014,
+        "hybrid_frac_removed": 0.13713342560339647
+      },
+      "k5": {
+        "bytes": 1419264,
+        "rank_equiv": 67,
+        "err_base": 58.723228454589844,
+        "sparse_frac_removed": 0.3102687407812762,
+        "lowrank_frac_removed": 0.18888878495189865,
+        "hybrid_frac_removed": 0.2614471329046192
+      }
+    },
+    "3bit": {
+      "k1": {
+        "bytes": 283800,
+        "rank_equiv": 13,
+        "err_base": 5.639339447021484,
+        "sparse_frac_removed": 0.0801341760472537,
+        "lowrank_frac_removed": 0.06060016478175545,
+        "hybrid_frac_removed": 0.07979164172279463
+      },
+      "k2": {
+        "bytes": 567600,
+        "rank_equiv": 27,
+        "err_base": 5.639339447021484,
+        "sparse_frac_removed": 0.12978744777006856,
+        "lowrank_frac_removed": 0.09990764848452871,
+        "hybrid_frac_removed": 0.1303368893993786
+      },
+      "k5": {
+        "bytes": 1419264,
+        "rank_equiv": 67,
+        "err_base": 5.639339447021484,
+        "sparse_frac_removed": 0.24112835254096032,
+        "lowrank_frac_removed": 0.18593297522388608,
+        "hybrid_frac_removed": 0.23917943285583154
+      }
+    },
+    "4bit": {
+      "k1": {
+        "bytes": 283800,
+        "rank_equiv": 13,
+        "err_base": 1.0974456071853638,
+        "sparse_frac_removed": 0.07734128057869827,
+        "lowrank_frac_removed": 0.06200700170681406,
+        "hybrid_frac_removed": 0.08082985943686327
+      },
+      "k2": {
+        "bytes": 567600,
+        "rank_equiv": 27,
+        "err_base": 1.0974456071853638,
+        "sparse_frac_removed": 0.12066842848082038,
+        "lowrank_frac_removed": 0.1008574695680804,
+        "hybrid_frac_removed": 0.12958273811728627
+      },
+      "k5": {
+        "bytes": 1419264,
+        "rank_equiv": 67,
+        "err_base": 1.0974456071853638,
+        "sparse_frac_removed": 0.2250725909215482,
+        "lowrank_frac_removed": 0.18579626138966798,
+        "hybrid_frac_removed": 0.2355488640556782
+      }
+    }
+  },
+  "layer14.mlp.down_proj": {
+    "2bit": {
+      "k1": {
+        "bytes": 283800,
+        "rank_equiv": 13,
+        "err_base": 51.78883743286133,
+        "sparse_frac_removed": 0.08720959053656885,
+        "lowrank_frac_removed": 0.05180569459653939,
+        "hybrid_frac_removed": 0.07247431945458993
+      },
+      "k2": {
+        "bytes": 567600,
+        "rank_equiv": 27,
+        "err_base": 51.78883743286133,
+        "sparse_frac_removed": 0.14847328027797013,
+        "lowrank_frac_removed": 0.08645171640554783,
+        "hybrid_frac_removed": 0.12244753347657977
+      },
+      "k5": {
+        "bytes": 1419264,
+        "rank_equiv": 67,
+        "err_base": 51.78883743286133,
+        "sparse_frac_removed": 0.28363746878437324,
+        "lowrank_frac_removed": 0.16744495652775349,
+        "hybrid_frac_removed": 0.23579033882475964
+      }
+    },
+    "3bit": {
+      "k1": {
+        "bytes": 283800,
+        "rank_equiv": 13,
+        "err_base": 5.172775745391846,
+        "sparse_frac_removed": 0.08190745344552142,
+        "lowrank_frac_removed": 0.05220187466981541,
+        "hybrid_frac_removed": 0.07290144990407077
+      },
+      "k2": {
+        "bytes": 567600,
+        "rank_equiv": 27,
+        "err_base": 5.172775745391846,
+        "sparse_frac_removed": 0.13188193284038663,
+        "lowrank_frac_removed": 0.08588769071662983,
+        "hybrid_frac_removed": 0.11672480435969557
+      },
+      "k5": {
+        "bytes": 1419264,
+        "rank_equiv": 67,
+        "err_base": 5.172775745391846,
+        "sparse_frac_removed": 0.24994194834356664,
+        "lowrank_frac_removed": 0.16376448330061943,
+        "hybrid_frac_removed": 0.22162246521210127
+      }
+    },
+    "4bit": {
+      "k1": {
+        "bytes": 283800,
+        "rank_equiv": 13,
+        "err_base": 1.016349196434021,
+        "sparse_frac_removed": 0.08283970158654574,
+        "lowrank_frac_removed": 0.05315165636357133,
+        "hybrid_frac_removed": 0.07386554035390414
+      },
+      "k2": {
+        "bytes": 567600,
+        "rank_equiv": 27,
+        "err_base": 1.016349196434021,
+        "sparse_frac_removed": 0.13149017301107058,
+        "lowrank_frac_removed": 0.08658740486912886,
+        "hybrid_frac_removed": 0.1181365169419013
+      },
+      "k5": {
+        "bytes": 1419264,
+        "rank_equiv": 67,
+        "err_base": 1.016349196434021,
+        "sparse_frac_removed": 0.24491086126683204,
+        "lowrank_frac_removed": 0.16400213236247108,
+        "hybrid_frac_removed": 0.22074660836488968
+      }
+    }
+  },
+  "layer21.mlp.down_proj": {
+    "2bit": {
+      "k1": {
+        "bytes": 283800,
+        "rank_equiv": 13,
+        "err_base": 347.9082946777344,
+        "sparse_frac_removed": 0.09062706382372543,
+        "lowrank_frac_removed": 0.07736482127292021,
+        "hybrid_frac_removed": 0.08175200230100033
+      },
+      "k2": {
+        "bytes": 567600,
+        "rank_equiv": 27,
+        "err_base": 347.9082946777344,
+        "sparse_frac_removed": 0.15794106081274117,
+        "lowrank_frac_removed": 0.13148832846692338,
+        "hybrid_frac_removed": 0.14687771567295094
+      },
+      "k5": {
+        "bytes": 1419264,
+        "rank_equiv": 67,
+        "err_base": 347.9082946777344,
+        "sparse_frac_removed": 0.3011000890418367,
+        "lowrank_frac_removed": 0.23594849906480198,
+        "hybrid_frac_removed": 0.2859928884071844
+      }
+    },
+    "3bit": {
+      "k1": {
+        "bytes": 283800,
+        "rank_equiv": 13,
+        "err_base": 30.671199798583984,
+        "sparse_frac_removed": 0.07008718984720785,
+        "lowrank_frac_removed": 0.08175346328500621,
+        "hybrid_frac_removed": 0.08023690992505106
+      },
+      "k2": {
+        "bytes": 567600,
+        "rank_equiv": 27,
+        "err_base": 30.671199798583984,
+        "sparse_frac_removed": 0.125445274170485,
+        "lowrank_frac_removed": 0.1390516563434242,
+        "hybrid_frac_removed": 0.1386763580481305
+      },
+      "k5": {
+        "bytes": 1419264,
+        "rank_equiv": 67,
+        "err_base": 30.671199798583984,
+        "sparse_frac_removed": 0.243208531155231,
+        "lowrank_frac_removed": 0.24353725141851557,
+        "hybrid_frac_removed": 0.26011505084841047
+      }
+    },
+    "4bit": {
+      "k1": {
+        "bytes": 283800,
+        "rank_equiv": 13,
+        "err_base": 5.783666610717773,
+        "sparse_frac_removed": 0.060048009650737866,
+        "lowrank_frac_removed": 0.0799378987681656,
+        "hybrid_frac_removed": 0.07106198349969184
+      },
+      "k2": {
+        "bytes": 567600,
+        "rank_equiv": 27,
+        "err_base": 5.783666610717773,
+        "sparse_frac_removed": 0.11808377252039459,
+        "lowrank_frac_removed": 0.13572759948118707,
+        "hybrid_frac_removed": 0.12840611125456625
+      },
+      "k5": {
+        "bytes": 1419264,
+        "rank_equiv": 67,
+        "err_base": 5.783666610717773,
+        "sparse_frac_removed": 0.23800533719046257,
+        "lowrank_frac_removed": 0.23961623938473253,
+        "hybrid_frac_removed": 0.2515944130986737
+      }
+    }
+  },
+  "layer14.self_attn.o_proj": {
+    "2bit": {
+      "k1": {
+        "bytes": 48576,
+        "rank_equiv": 7,
+        "err_base": 19.343008041381836,
+        "sparse_frac_removed": 0.12034474451863064,
+        "lowrank_frac_removed": 0.17366903496758357,
+        "hybrid_frac_removed": 0.1755445821726923
+      },
+      "k2": {
+        "bytes": 97416,
+        "rank_equiv": 15,
+        "err_base": 19.343008041381836,
+        "sparse_frac_removed": 0.18177716146449363,
+        "lowrank_frac_removed": 0.22999387554286643,
+        "hybrid_frac_removed": 0.24289729124658188
+      },
+      "k5": {
+        "bytes": 243408,
+        "rank_equiv": 39,
+        "err_base": 19.343008041381836,
+        "sparse_frac_removed": 0.31076733994937733,
+        "lowrank_frac_removed": 0.3401974715882282,
+        "hybrid_frac_removed": 0.3722181963330762
+      }
+    },
+    "3bit": {
+      "k1": {
+        "bytes": 48576,
+        "rank_equiv": 7,
+        "err_base": 3.1234219074249268,
+        "sparse_frac_removed": 0.13571069863237362,
+        "lowrank_frac_removed": 0.16982368949896187,
+        "hybrid_frac_removed": 0.1725556294030013
+      },
+      "k2": {
+        "bytes": 97416,
+        "rank_equiv": 15,
+        "err_base": 3.1234219074249268,
+        "sparse_frac_removed": 0.20001380091463117,
+        "lowrank_frac_removed": 0.23122982102854828,
+        "hybrid_frac_removed": 0.24267297763358742
+      },
+      "k5": {
+        "bytes": 243408,
+        "rank_equiv": 39,
+        "err_base": 3.1234219074249268,
+        "sparse_frac_removed": 0.3295906494528754,
+        "lowrank_frac_removed": 0.3462936491137302,
+        "hybrid_frac_removed": 0.38225487861950547
+      }
+    },
+    "4bit": {
+      "k1": {
+        "bytes": 48576,
+        "rank_equiv": 7,
+        "err_base": 0.666402280330658,
+        "sparse_frac_removed": 0.14220676855651082,
+        "lowrank_frac_removed": 0.1706492850195096,
+        "hybrid_frac_removed": 0.1753750656842905
+      },
+      "k2": {
+        "bytes": 97416,
+        "rank_equiv": 15,
+        "err_base": 0.666402280330658,
+        "sparse_frac_removed": 0.20858772626141786,
+        "lowrank_frac_removed": 0.23295730241606383,
+        "hybrid_frac_removed": 0.2461248392831189
+      },
+      "k5": {
+        "bytes": 243408,
+        "rank_equiv": 39,
+        "err_base": 0.666402280330658,
+        "sparse_frac_removed": 0.33742155339154545,
+        "lowrank_frac_removed": 0.3491950851380209,
+        "hybrid_frac_removed": 0.38560347931084604
+      }
+    }
+  }
+}

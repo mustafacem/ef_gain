@@ -1,0 +1,60 @@
+{
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "ppl": {
+    "code": {
+      "full_precision": 3.4829593936307317,
+      "3bit": 3.9202554391799493,
+      "uniform4bit": 3.5730078308254987,
+      "patch_pb3": 3.816333703232824,
+      "patch_pb16": 3.8534866495740605
+    },
+    "math": {
+      "full_precision": 3.2031572930000034,
+      "3bit": 3.3528419940572327,
+      "uniform4bit": 3.213192728418977,
+      "patch_pb3": 3.238746648640695,
+      "patch_pb16": 3.32180401329504
+    },
+    "knowledge": {
+      "full_precision": 5.618013208632974,
+      "3bit": 5.939661542610754,
+      "uniform4bit": 5.659505921730705,
+      "patch_pb3": 5.787271738079733,
+      "patch_pb16": 5.846252360826351
+    },
+    "chat": {
+      "full_precision": 21.708047997036754,
+      "3bit": 25.161301957507046,
+      "uniform4bit": 22.463614713779727,
+      "patch_pb3": 23.76771696321945,
+      "patch_pb16": 24.36389242022733
+    }
+  },
+  "sig": {
+    "code": {
+      "pb3_beats_pb16": 1.0,
+      "pb3_beats_base": 1.0,
+      "pb3_beats_uniform": 0.0
+    },
+    "math": {
+      "pb3_beats_pb16": 1.0,
+      "pb3_beats_base": 1.0,
+      "pb3_beats_uniform": 0.1375
+    },
+    "knowledge": {
+      "pb3_beats_pb16": 1.0,
+      "pb3_beats_base": 1.0,
+      "pb3_beats_uniform": 0.0
+    },
+    "chat": {
+      "pb3_beats_pb16": 1.0,
+      "pb3_beats_base": 1.0,
+      "pb3_beats_uniform": 0.0
+    }
+  },
+  "eff_bits": {
+    "patch_pb3": 4.074997674851191,
+    "patch_pb16": 4.075,
+    "uniform4bit": 4.25
+  }
+}

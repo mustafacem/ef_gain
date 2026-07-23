@@ -1,0 +1,9 @@
+{
+  "task": "code",
+  "n_calib": 150,
+  "n_eval": 100,
+  "seed": 0,
+  "calib_hash": "527fa7d7d780826b",
+  "eval_hash": "17e034e9c3c1e3f1",
+  "ngram_overlap_ratio": 0.030003409478349813
+}

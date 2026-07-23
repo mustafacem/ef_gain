@@ -1,0 +1,88 @@
+{
+  "eff_bits": {
+    "fp32_ref": 32.0,
+    "fp16_store": 16.0,
+    "4bit": 4.25,
+    "6bit": 6.25,
+    "8bit": 8.25,
+    "8bit+k1": 8.3275,
+    "8bit+k2": 8.405,
+    "8bit+k5": 8.6375
+  },
+  "ppl": {
+    "code": {
+      "full_precision": 5.591872864719759,
+      "4bit": 5.715620976025916,
+      "6bit": 5.632867769571633,
+      "8bit": 5.597176774752109,
+      "8bit+k1": 5.590202226658018,
+      "8bit+k2": 5.590697840867797,
+      "8bit+k5": 5.591599935937462
+    },
+    "math": {
+      "full_precision": 5.358341005035311,
+      "4bit": 5.442278924442784,
+      "6bit": 5.399307229917129,
+      "8bit": 5.360159257001436,
+      "8bit+k1": 5.359275783263591,
+      "8bit+k2": 5.359684697354401,
+      "8bit+k5": 5.359240641620143
+    },
+    "knowledge": {
+      "full_precision": 7.44292628278538,
+      "4bit": 7.704365773765373,
+      "6bit": 7.449046434296512,
+      "8bit": 7.4502927812822985,
+      "8bit+k1": 7.44583182043407,
+      "8bit+k2": 7.445897292497666,
+      "8bit+k5": 7.4448637321340385
+    },
+    "chat": {
+      "full_precision": 28.95978666562476,
+      "4bit": 30.473867098128782,
+      "6bit": 29.132808616893897,
+      "8bit": 28.984658811160276,
+      "8bit+k1": 28.970142983502132,
+      "8bit+k2": 28.969957460341156,
+      "8bit+k5": 28.96684917356879
+    }
+  },
+  "sig": {
+    "code": {
+      "8bit+k1_beats_8bit": 1.0,
+      "8bit+k1_beats_full": 0.915,
+      "8bit+k2_beats_8bit": 1.0,
+      "8bit+k2_beats_full": 0.83325,
+      "8bit+k5_beats_8bit": 1.0,
+      "8bit+k5_beats_full": 0.59525,
+      "8bit_beats_full": 0.0
+    },
+    "math": {
+      "8bit+k1_beats_8bit": 0.9785,
+      "8bit+k1_beats_full": 0.3865,
+      "8bit+k2_beats_8bit": 0.86,
+      "8bit+k2_beats_full": 0.335,
+      "8bit+k5_beats_8bit": 0.944,
+      "8bit+k5_beats_full": 0.38875,
+      "8bit_beats_full": 0.298
+    },
+    "knowledge": {
+      "8bit+k1_beats_8bit": 1.0,
+      "8bit+k1_beats_full": 0.0835,
+      "8bit+k2_beats_8bit": 1.0,
+      "8bit+k2_beats_full": 0.073,
+      "8bit+k5_beats_8bit": 1.0,
+      "8bit+k5_beats_full": 0.1665,
+      "8bit_beats_full": 0.00025
+    },
+    "chat": {
+      "8bit+k1_beats_8bit": 1.0,
+      "8bit+k1_beats_full": 0.10075,
+      "8bit+k2_beats_8bit": 1.0,
+      "8bit+k2_beats_full": 0.09975,
+      "8bit+k5_beats_8bit": 1.0,
+      "8bit+k5_beats_full": 0.178,
+      "8bit_beats_full": 0.00175
+    }
+  }
+}
