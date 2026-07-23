@@ -20,3 +20,13 @@ results/calibration_data/
 results/patches/
 
 # Kept in-repo: results/*.json (experiment outputs), results/report/*.md (findings)
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.pdf
+paper/*.synctex.gz
+paper/*.fls
+paper/*.fdb_latexmk
+paper/compile*.log

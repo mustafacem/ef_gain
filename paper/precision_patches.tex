@@ -1,0 +1,530 @@
+\documentclass[11pt]{article}
+
+% ---- arXiv-friendly preamble: only widely available packages ----
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{caption}
+\usepackage{authblk}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  citecolor=blue!50!black,
+  urlcolor=blue!50!black
+}
+
+\newcommand{\bpw}{bits/weight}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{\textbf{Precision Patches: A Controlled Study of\\
+Task-Conditional Quantization for Large Language Models}}
+
+\author{Mustafa Cem B\"uy\"ukalpelli}
+\affil{\small Independent Researcher \\ \texttt{mustafacembuyukalpelli@gmail.com}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Post-training quantization produces a single static artifact. We ask whether a
+shared, aggressively-quantized base model plus small, swappable
+\emph{precision patches}---selected weight groups restored to higher
+precision from task-specific calibration data---can improve on ordinary
+uniform quantization. We conduct a controlled study on Qwen2.5 (0.5B, 1.5B,
+7B) with full-surface quantization (all seven linear projection types), a
+closed-form activation-space correction that reuses the quantizer's own
+Hessian, and rigorous matched-memory comparisons throughout.
+
+Our results are mixed and, we argue, more informative than a single positive
+headline would be. \textbf{(1)} Weight sensitivity is genuinely
+task-dependent, measured against a split-half noise ceiling; MLP layers carry
+substantially more task-specific structure than attention. \textbf{(2)} The
+patch \emph{mechanism} is real: task-matched patches beat per-layer-type mixed
+precision by roughly $2\times$ at matched memory ($p{=}1.000$ on all four
+tasks), and storing corrections at 3 bits rather than \code{fp16} is worth
+$2.13\times$. \textbf{(3)} Nevertheless, uniform quantization remains the
+better use of a bit on absolute quality; patches win only by filling the
+sub-integer-\bpw{} gaps that integer-only uniform quantization cannot occupy
+(3.25--5.25 \bpw{}). \textbf{(4)} The single robust practical win is a cheap
+mixed-precision base (one extra bit on attention, $\approx$12\% of the
+weights); a small patch on top ties uniform 4-bit at lower memory on both
+perplexity and GSM8K accuracy. Finally, we report a methodological finding
+with broad relevance: \textbf{perplexity understates quantization damage by
+roughly an order of magnitude relative to downstream accuracy}
+(a $+2.8\%$ perplexity increase costs $-31.9\%$ GSM8K accuracy), so
+perplexity-based ``recovery'' figures common in the quantization literature
+are systematically optimistic. We release all code, results, and negative
+findings.
+\end{abstract}
+
+\section{Introduction}
+
+Quantization is the dominant lever for deploying large language models (LLMs)
+under memory constraints. Standard post-training quantization (PTQ) methods
+such as GPTQ~\cite{frantar2022gptq} and AWQ~\cite{lin2023awq} compress a model
+once into a single static artifact whose quality is fixed across all
+downstream uses. This is efficient but leaves value on the table if
+\emph{which} weights matter most depends on the task the model is serving.
+
+We investigate a simple alternative that borrows the deployment story of
+parameter-efficient adapters~\cite{hu2021lora}. Ship one aggressively
+quantized base model and, alongside it, small \emph{precision patches}: for a
+given task, a subset of weight groups is restored to higher precision, chosen
+from task-specific calibration data. Serving a coding workload loads the code
+patch; a math workload swaps in the math patch. Unlike LoRA, no new parameters
+are introduced---a patch only recovers information the full-precision model
+already had. The scientific question underneath the engineering is whether
+quantization sensitivity is task-dependent enough to make this worthwhile.
+
+We study this question exhaustively and report an honest, nuanced answer. The
+mechanism works and is statistically decisive against strong null hypotheses,
+but it does not beat the simplest baseline---spending the same bits
+uniformly---on absolute quality. Its genuine value is narrow and geometric:
+integer-only uniform quantization cannot occupy the memory band between
+consecutive bit-widths, and patches (together with mixed precision) fill it.
+
+Along the way we surface two measurement findings that we believe matter
+beyond this paper: perplexity dramatically understates the downstream damage
+of quantization, and calibration-seed variance is large enough (up to 3.35\%
+relative) that many small single-seed ``wins'' in this line of work are
+unproven.
+
+\paragraph{Contributions.}
+\begin{itemize}
+  \item A \emph{task-sensitivity atlas} with a split-half noise-ceiling
+    methodology that makes ``high overlap'' interpretable, establishing that
+    quantization sensitivity is task-dependent but that MLP layers carry the
+    task-specific signal while attention is largely task-universal
+    (Sec.~\ref{sec:atlas}).
+  \item A \emph{closed-form activation-space correction} for patch values that
+    reuses the quantizer's own Hessian and provably dominates naive
+    weight restoration, resolving a coupling problem specific to
+    compensated quantizers like GPTQ (Sec.~\ref{sec:method}).
+  \item A rigorous, \emph{matched-memory} characterization of the
+    quality/memory Pareto frontier from 2.25 to 5.25 \bpw{}, in both
+    perplexity and GSM8K accuracy, including a battery of ablations and four
+    explicitly retracted claims (Secs.~\ref{sec:results}--\ref{sec:negative}).
+  \item The finding that \emph{perplexity understates quantization damage
+    $\sim$10$\times$ relative to accuracy}, and a first quantification of
+    calibration-seed variance (Sec.~\ref{sec:caveats}).
+\end{itemize}
+
+\section{Related Work}
+
+\paragraph{Post-training quantization.} GPTQ~\cite{frantar2022gptq} quantizes
+weights column-by-column while compensating unquantized columns for the
+induced error, using a Hessian estimated from calibration activations.
+AWQ~\cite{lin2023awq} scales salient channels by activation magnitude before
+round-to-nearest. Both target a single static model. We build directly on the
+GPTQ formulation and reuse its Hessian for patch construction.
+
+\paragraph{Mixed-precision and outlier-aware quantization.} A body of work
+observes that a small fraction of weights or channels dominate quantization
+error and protects them at higher precision: LLM.int8()~\cite{dettmers2022int8}
+keeps outlier channels in \code{fp16}, SpQR~\cite{dettmers2023spqr} and
+SqueezeLLM~\cite{kim2023squeezellm} isolate outlier weights. These allocate
+precision non-uniformly but produce one static model with no task
+conditioning. Our patches are group-level, task-conditional, and swappable; we
+find, however, that much of their benefit coincides with per-layer-type mixed
+precision (Sec.~\ref{sec:vsmixed}), which situates the contribution precisely.
+
+\paragraph{Task-aware quantization.} Recent work allocates bit-widths per layer
+from task-specific relevance scores, showing sensitivity is task-dependent, but
+produces one static model per task. Our design differs in artifact: a single
+shared base plus $N$ cheap swappable patches, at group rather than layer
+granularity. Our controlled comparison against a task-\emph{calibrated} base
+(Sec.~\ref{sec:vsmixed}) is, to our knowledge, not standard and is essential
+for isolating what task conditioning actually buys.
+
+\paragraph{Adapters.} Precision patches are structurally analogous to
+LoRA~\cite{hu2021lora}: a frozen base plus small swappable task modules. The
+distinction is that patches add no parameters and store a quantized residual
+rather than a learned low-rank update. We deliberately avoid learned patches to
+keep the comparison to uniform quantization clean.
+
+\section{Method}
+\label{sec:method}
+
+\subsection{Setup and notation}
+Weights of a linear layer are $W \in \mathbb{R}^{d_\text{out}\times d_\text{in}}$.
+We use group-wise quantization with group size $g{=}128$: contiguous runs of
+$g$ input-dimension weights per output row share one asymmetric scale and
+zero-point. A \emph{group} is the atomic patch unit, aligned to the
+quantization grid so that patching a group never disturbs a neighbor's
+scales. Let $Q(W)$ denote the quantized base and $R = W - Q(W)$ the residual.
+Calibration activations $X$ define the layer Hessian $H = X^\top X$.
+
+A patch selects a set $S$ of groups and stores a correction $\Delta$ supported
+on $S$; the served weight is $Q(W) + \Delta$. Two design choices define a
+patch: \emph{which} groups (the mask) and \emph{what} correction values.
+
+\subsection{Task-sensitivity scoring}
+We score each group by its contribution to activation-space error. For group
+$G$ we use an OBS/OBC-style~\cite{lecun1989obd,frantar2022gptq} saliency: the
+error reduction achievable by optimally correcting that group in isolation,
+\begin{equation}
+  s(G) \;=\; (Hr)_G^\top \, (H_{GG})^{-1} \, (Hr)_G,
+  \label{eq:obs}
+\end{equation}
+which is exactly the drop in $\lVert X(W - Q(W) - \Delta)\rVert_F^2$ obtainable
+by correcting only $G$. Scores are computed from task-specific $H$, so
+selection is task-conditional. Equation~\eqref{eq:obs} is stated in the same
+units as the objective the patch optimizes, unlike magnitude- or
+activation-only heuristics.
+
+\subsection{Closed-form activation-space correction}
+The naive patch restores selected groups to their original values,
+$\Delta_S = R_S$. This is optimal only if the base is an unbiased per-weight
+approximation---which a GPTQ base is \emph{not}, because its error compensation
+has already redistributed each group's quantization error into surrounding
+weights. Restoring a group then removes an error the rest of the matrix is
+still compensating for. Empirically, patching a GPTQ base with restored values
+\emph{hurt} in 13 of 16 configurations.
+
+We instead solve for the correction that minimizes activation-space
+reconstruction error against the base that actually exists. For a fixed mask
+$S$, minimizing $\lVert X(R - \Delta)\rVert_F^2$ subject to
+$\mathrm{supp}(\Delta)\subseteq S$ has, per output row, the closed form
+\begin{equation}
+  \Delta_S \;=\; (H_{SS})^{-1}\,(Hr)_S ,
+  \label{eq:solve}
+\end{equation}
+where $H$ is exactly the Hessian GPTQ already accumulates. No gradient descent
+is required. Restoration is the special case $\Delta_S = R_S$, so
+Eq.~\eqref{eq:solve} strictly dominates it: it optimizes over a space
+containing the naive solution as one point. Because the objective references
+the actual base, compensation ceases to be a problem to avoid and becomes a
+term the solve absorbs. This alone raised the fraction of configurations in
+which patching helps a GPTQ base from 3/16 to 20/48.
+
+\subsection{Variable-bit patch storage}
+\label{sec:varbit}
+Earlier iterations of this idea, and much outlier-protection work, restore
+selected weights to \code{fp16}. On a 3-bit base that spends $+12.75$
+\bpw{} on each patched weight. But the quantization bit-scaling law---each
+added bit removes $\approx 79\%$ of remaining error, matching the
+$\Delta^2/12$ theory that predicts $75\%$---implies most of the benefit lies in
+the first few added bits. We therefore quantize the \emph{solved} correction
+$\Delta$ to $b_p$ bits with the same group-wise machinery as the base. The
+\code{fp16} patch is the special case $b_p{=}16$, making prior designs a
+single point on a sweep. At matched \emph{bytes}, the fair question is whether
+to patch few groups precisely or many groups coarsely.
+
+\subsection{Mask encoding}
+A patch must record which groups it stores. An explicit $(\text{row},
+\text{group})$ index costs 8~bytes against $\approx$52~bytes of 3-bit payload
+per group---13\% overhead, paid per group. A dense bitmap over all groups costs
+a flat $\lceil |G|/8\rceil$ bytes and wins above $\approx$1.5\% coverage; at the
+$\sim$22\% coverage these patches run at, it frees $\sim$12\% of the budget,
+buying $\sim$14\% more coverage.
+
+\section{Experimental Setup}
+\label{sec:setup}
+
+\paragraph{Models and surface.} Qwen2.5-Instruct at 0.5B, 1.5B, and 7B. Unless
+stated, experiments quantize the \emph{full surface}: all seven linear
+projection types (\code{q,k,v,o,gate,up,down}), 358M weights for the 0.5B
+model. Prior iterations that quantized only \code{o\_proj}$+$\code{down\_proj}
+(35\% of weights) left the rest in \code{fp16} and thereby inflated quality;
+all headline numbers here use the full surface.
+
+\paragraph{Data.} Four tasks: code (MBPP; calibration from CodeParrot), math
+(GSM8K), knowledge (ARC-Easy), and general text (WikiText-2). Calibration uses
+2048-token sequences reaching 26--54 activation samples per Hessian dimension;
+we verified calibration/evaluation disjointness by 8-gram overlap
+($\le$3\%). \emph{Hessian conditioning is reported for every $H$-dependent step
+and is a prerequisite}: an early positive result (a ``code exception'') was
+retracted after we traced it to a rank-deficient Hessian at $<$1 sample per
+dimension.
+
+\paragraph{Metrics.} Perplexity on held-out task text, and GSM8K exact-match
+accuracy (200 problems, 4-shot, greedy). Significance by paired bootstrap
+($N{=}4000$) over evaluation items. \emph{Every configuration is reported with
+its effective \bpw{}}; no comparison is made at unequal cost. This discipline
+was necessary: three distinct confounds in preliminary work arose from
+comparing configurations at unequal memory.
+
+\paragraph{Reproducibility.} Fake quantization (dequantized values held in
+\code{fp16}); we measure memory and quality, and claim no wall-clock speedup.
+Models larger than VRAM are handled by block-streaming quantization (peak
+0.59~GB for the 7B model on a 6~GB GPU). Code and all result files are
+released.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Task sensitivity is real, and lives in the MLP}
+\label{sec:atlas}
+We first ask whether sensitivity is task-dependent at all. The raw overlap of
+the top-1\% most sensitive groups across tasks is 65--80\% (Jaccard), which
+sounds high in isolation. It becomes interpretable only against a
+\emph{noise ceiling}: splitting one task's calibration set in half and
+re-scoring yields within-task overlap of $0.970$. Two samples of the same task
+agree at 97\%; different tasks agree at 65--80\%; random selection agrees at
+$0.5\%$. The go/no-go signal (ceiling minus cross-task overlap) is $0.246$,
+comfortably above a pre-registered threshold of $0.15$.
+
+A secondary finding: attention layers are far more task-universal than MLP
+layers (mean cross-task overlap $0.750$ vs.\ $0.492$). Task-specific structure
+concentrates in the MLP. This foreshadows Sec.~\ref{sec:vsmixed}, where
+much of the patch benefit turns out to coincide with a coarse
+attention-vs-MLP precision split.
+
+\subsection{The Pareto frontier, measured in accuracy}
+\label{sec:frontier}
+Table~\ref{tab:frontier} reports GSM8K accuracy across configurations spanning
+2.25--5.25 \bpw{}. Three regimes emerge.
+
+\begin{table}[t]
+\centering
+\caption{GSM8K accuracy across the memory frontier (Qwen2.5-0.5B, full
+surface, 200 problems, 4-shot). ``mix$XY$'' = attention at $X$ bits, MLP at $Y$
+bits; ``+pb3'' = a 3-bit precision patch. \textbf{Bold} marks the Pareto
+frontier. Uniform quantization exists only at integer bit-widths, leaving the
+shaded interior bands to mixed precision and patches.}
+\label{tab:frontier}
+\begin{tabular}{lrr}
+\toprule
+Configuration & \bpw{} & GSM8K acc. \\
+\midrule
+uniform 2-bit & 2.250 & 1.0\% \\
+mix32 & 2.373 & 1.5\% \\
+mix32 + pb3 & 3.198 & 0.5\% \\
+\textbf{uniform 3-bit} & \textbf{3.250} & \textbf{8.5\%} \\
+\textbf{mix43} & \textbf{3.373} & \textbf{12.5\%} \\
+mix43 + pb3 & 4.198 & 23.0\% \\
+\textbf{uniform 4-bit} & \textbf{4.250} & \textbf{23.5\%} \\
+\textbf{mix54} & \textbf{4.373} & \textbf{31.0\%} \\
+mix54 + pb3 & 5.198 & 30.5\% \\
+\textbf{uniform 5-bit} & \textbf{5.250} & \textbf{34.5\%} \\
+\midrule
+fp16 (reference) & 16.000 & 34.5\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Below 3.25 \bpw{}: nothing works.} Every configuration on a 2-bit base
+scores at chance (0.5--1.5\%). The 2-bit base is too destroyed for any
+affordable correction to rescue; \code{mix32+pb3} at 3.198 \bpw{} is actually
+\emph{worse} than plain uniform 3-bit, i.e.\ spending bits to patch a dead base
+is counterproductive. We caution that perplexity badly obscures this: relative
+to \code{fp16}, uniform 2-bit is $\sim$22{,}000$\times$ perplexity, and a
+configuration ``closing 98.6\% of the perplexity gap'' still sits at
+$\sim$300$\times$---a dead model that the ratio flatters.
+
+\textbf{The usable frontier (3.25--5.25 \bpw{}) is owned by mixed precision and
+patches at every interior point.} Because uniform quantization is integer-only,
+it simply does not exist between 3.25 and 4.25 \bpw{}; the band belongs to
+\code{mix43} and \code{mix43+pb3}.
+
+\textbf{At the integer rungs, uniform is competitive.} \code{mix43+pb3}
+(4.198 \bpw{}) reaches 23.0\% versus uniform 4-bit's 23.5\% (4.250 \bpw{})---a
+statistical tie ($p{=}0.406$ by paired bootstrap) at lower memory. The same
+holds in perplexity ($p{=}0.406$), so the parity claim is confirmed under two
+independent metrics.
+
+\subsection{Patch precision: 3-bit, not \code{fp16}}
+\label{sec:precision}
+Storing the solved correction at 3 bits rather than \code{fp16}, at matched
+bytes, closes $46.9\%$ of the quantization gap versus $22.0\%$ for
+\code{fp16}---a $2.13\times$ improvement, significant on all four tasks
+($p{=}1.000$). This matches the activation-space prediction and validates the
+bit-scaling argument of Sec.~\ref{sec:varbit}. The optimum is interior:
+2-bit patches are \emph{worse} than 3-bit (catastrophically so on attention),
+so ``lower is always better'' does not hold.
+
+\subsection{Patches are not merely mixed precision}
+\label{sec:vsmixed}
+Sec.~\ref{sec:atlas} showed task structure concentrates in the MLP, and
+attention tolerates less error. This raises the strongest null hypothesis: are
+patches an expensive way to rediscover ``attention needs more bits than MLP,''
+which plain per-layer-type mixed precision achieves with no Hessian solve, no
+mask, and no indices? We test this at matched memory. At $\approx$4.03 versus
+4.075 \bpw{}, patches close $46.9\%$ of the gap against mixed precision's
+$24.4\%$---nearly $2\times$, at $p{=}1.000$ on all four tasks. Whatever the
+saliency scores select is substantially finer-grained than a layer-type split.
+
+We also tested the converse charitable hypothesis---that allocation was the
+bug and forcing budget onto attention would help---and it failed: proportional
+top-$k$ and attention-weighted allocation are indistinguishable, and pushing
+100\% of budget onto attention collapses performance (attention is only
+$\sim$12\% of the full surface).
+
+\subsection{The verdict against uniform, and per-bit efficiency}
+Despite the above, uniform 4-bit wins on \emph{absolute} quality: 89.3\% of the
+perplexity gap closed versus the best patch config's 67.3\% at comparable cost,
+$p{=}0.000$ on three of four tasks (math is the tie). What patches and mixed
+precision win instead is \emph{per-bit efficiency} and \emph{frontier
+coverage}. On the full surface, upgrading attention by one bit costs only
+0.123 \bpw{} and recovers 41.2\% of the gap---the single most byte-efficient
+intervention we measured, roughly $4\times$ uniform-4-bit's efficiency per
+bit. The practical recommendation is therefore explicit: for maximum quality
+at $\approx$4.25 \bpw{}, use uniform 4-bit; for any memory budget between
+integer bit-widths, a mixed-precision base with an optional 3-bit patch
+dominates.
+
+\subsection{Scale: no free lunch}
+\label{sec:scale}
+We measured the uniform-vs-patch per-bit efficiency ratio at matched depth on
+attention layers across 0.5B, 1.5B, and 7B. It is flat: $1.05\times$,
+$0.97\times$, $1.12\times$ respectively (values $<1$ favor patches). Layer-to-
+layer variance within a single model exceeds the variation across a
+$14\times$ range of model sizes. An earlier report of a ``scale-gated'' effect
+was retracted: it compared \code{fp16} patches at 0.5B against a hybrid at 1.5B,
+i.e.\ different designs, not different scales.
+
+\section{What Did Not Work}
+\label{sec:negative}
+We ran and rejected several ideas with pre-registered promotion rules
+(a $\geq$5\% relative improvement at matched bytes on a majority of probe
+layers). We report them because negative results at matched memory are the
+main safeguard against the metric confounds that dogged this project.
+
+\begin{itemize}
+  \item \textbf{Solve/quantize iteration} (alternate solving and re-quantizing
+    the residual): rejected, 0/12 probes. Two 3-bit rounds is $\approx$6-bit
+    fidelity on half the coverage, and 6-bit patches already lose to 3-bit.
+  \item \textbf{Residual-aware re-selection} (spend half the budget, re-score
+    against the partial correction, spend the rest): rejected, 1/12 probes.
+  \item \textbf{Attention-weighted budget allocation}: no effect versus
+    proportional top-$k$ (Sec.~\ref{sec:vsmixed}).
+  \item \textbf{Scaling past 0.5B} as a route to beating uniform: the frontier
+    curve is flat (Sec.~\ref{sec:scale}).
+\end{itemize}
+
+A single positive method change survived: \textbf{bitmap mask encoding}
+(Sec.~\ref{sec:method}), promoted at 12/12 probes in activation space. We note
+in Sec.~\ref{sec:caveats} that its perplexity gain is partly within seed noise.
+
+The unifying explanation for the pattern is that, at a fixed byte budget,
+\emph{coverage dominates fidelity}. Every idea that traded coverage for
+precision (fp16 patches, iteration, 2-bit patches) lost; every idea that bought
+coverage (3-bit patches, bitmap) won.
+
+\section{Measurement Caveats}
+\label{sec:caveats}
+
+\subsection{Perplexity understates quantization damage}
+The most broadly relevant finding is a discrepancy between metrics.
+Table~\ref{tab:pplacc} contrasts perplexity increase with GSM8K accuracy loss
+for the same models. A $+2.8\%$ perplexity increase (uniform 4-bit) costs
+$-31.9\%$ accuracy; a $+31.3\%$ increase (uniform 3-bit) costs $-75.4\%$.
+Perplexity moves a few percent where accuracy moves tens of percent.
+
+\begin{table}[t]
+\centering
+\caption{Perplexity vs.\ GSM8K accuracy degradation on the math task, same
+models. Config \emph{ordering} is preserved across metrics (so comparative
+conclusions hold), but absolute perplexity-based ``recovery'' is
+systematically optimistic.}
+\label{tab:pplacc}
+\begin{tabular}{lrr}
+\toprule
+Configuration & $\Delta$PPL vs.\ fp16 & $\Delta$acc.\ vs.\ fp16 \\
+\midrule
+uniform 4-bit & $+2.8\%$ & $-31.9\%$ \\
+mix43 + pb3 (5\%) & $+10.6\%$ & $-33.3\%$ \\
+mixed attn@4 + mlp@3 & $+19.7\%$ & $-63.8\%$ \\
+uniform 3-bit & $+31.3\%$ & $-75.4\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Config ordering is identical under both metrics, so \emph{comparative}
+conclusions in this paper (and in PTQ work generally) are safe. But absolute
+``gap closed'' or ``$X\%$ recovered'' figures reported in perplexity---ubiquitous
+in the quantization literature---overstate how much task capability survives.
+We recommend downstream accuracy as a primary metric for sub-4-bit claims.
+
+\subsection{Calibration-seed variance}
+Re-running the composite configuration across three disjoint calibration draws
+gives relative standard deviations of 0.22\% (knowledge), 1.02\% (chat), 2.07\%
+(code), and 3.35\% (math). This is the first such measurement in our study, and
+it is consequential: the bitmap encoding's perplexity gain ($+0.6$ to $+2.2\%$)
+is within seed noise on two of four tasks. More broadly, \emph{any single-seed
+perplexity difference smaller than $\sim$3\% on math should be treated as
+unproven}. Bootstrap over evaluation items, standard in this area, captures
+evaluation noise but not calibration-draw variance and thus understates
+uncertainty.
+
+\section{Limitations}
+Experiments center on Qwen2.5-0.5B with scale checks at 1.5B/7B; the frontier
+in accuracy is characterized only at 0.5B, where GSM8K accuracy is modest
+(34.5\% at \code{fp16}) and the accuracy test resolves only differences of
+$\gtrsim$13\% at $n{=}200$---a null result there means ``indistinguishable at
+this sample size,'' not ``identical.'' We use fake quantization and claim no
+wall-clock speedup; realizing the memory savings requires mixed-precision
+kernels we do not implement. We evaluate one downstream task (GSM8K);
+broader task coverage, and larger models where accuracy is not floored, are
+the clear next steps. Patches store a quantized residual; learned patches
+(a QLoRA-style direction) may recover more but blur the comparison to
+training-free uniform quantization and are deliberately out of scope.
+
+\section{Conclusion}
+Task-conditional precision patches are a real, statistically decisive mechanism
+that nonetheless does not beat the simplest baseline of spending bits
+uniformly. Their genuine value is geometric: they, and cheap per-layer-type
+mixed precision, fill the sub-integer-\bpw{} bands that integer-only uniform
+quantization cannot occupy, and a mixed-precision base plus a small 3-bit patch
+ties uniform 4-bit at lower memory on both perplexity and GSM8K accuracy. The
+robust, deployable win is the mixed-precision base itself. Equally important
+are the guardrails the study produced: a noise-ceiling methodology for
+task-sensitivity claims, a demonstration that perplexity understates
+quantization damage by roughly an order of magnitude, and a quantification of
+calibration-seed variance that retroactively bounds which small ``wins'' in
+this space are real. We release everything, including the negative results, in
+the hope that the matched-memory, noise-ceiling, accuracy-first discipline is
+as useful as any single number.
+
+\paragraph{Reproducibility.} All code, experiment scripts, result files, and
+the full record of retracted claims are available at
+\url{https://github.com/mustafacem/ef_gain}.
+
+\begin{thebibliography}{9}
+\bibitem{frantar2022gptq} E.~Frantar, S.~Ashkboos, T.~Hoefler, and D.~Alistarh.
+  \newblock GPTQ: Accurate Post-Training Quantization for Generative
+  Pre-trained Transformers.
+  \newblock \emph{ICLR}, 2023.
+
+\bibitem{lin2023awq} J.~Lin, J.~Tang, H.~Tang, S.~Yang, X.~Dang, and S.~Han.
+  \newblock AWQ: Activation-aware Weight Quantization for LLM Compression and
+  Acceleration.
+  \newblock \emph{MLSys}, 2024.
+
+\bibitem{dettmers2022int8} T.~Dettmers, M.~Lewis, Y.~Belkada, and
+  L.~Zettlemoyer.
+  \newblock LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale.
+  \newblock \emph{NeurIPS}, 2022.
+
+\bibitem{dettmers2023spqr} T.~Dettmers, R.~Svirschevski, V.~Egiazarian,
+  D.~Kuznedelev, E.~Frantar, S.~Ashkboos, A.~Borzunov, T.~Hoefler, and
+  D.~Alistarh.
+  \newblock SpQR: A Sparse-Quantized Representation for Near-Lossless LLM Weight
+  Compression.
+  \newblock \emph{ICLR}, 2024.
+
+\bibitem{kim2023squeezellm} S.~Kim, C.~Hooper, A.~Gholami, Z.~Dong, X.~Li,
+  S.~Shen, M.~Mahoney, and K.~Keutzer.
+  \newblock SqueezeLLM: Dense-and-Sparse Quantization.
+  \newblock \emph{ICML}, 2024.
+
+\bibitem{hu2021lora} E.~J.~Hu, Y.~Shen, P.~Wallis, Z.~Allen-Zhu, Y.~Li,
+  S.~Wang, L.~Wang, and W.~Chen.
+  \newblock LoRA: Low-Rank Adaptation of Large Language Models.
+  \newblock \emph{ICLR}, 2022.
+
+\bibitem{lecun1989obd} Y.~LeCun, J.~S.~Denker, and S.~A.~Solla.
+  \newblock Optimal Brain Damage.
+  \newblock \emph{NeurIPS}, 1989.
+\end{thebibliography}
+
+\end{document}
