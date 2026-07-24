@@ -129,6 +129,11 @@ unproven.
   \item The finding that \emph{perplexity understates quantization damage
     $\sim$10$\times$ relative to accuracy}, and a first quantification of
     calibration-seed variance (Sec.~\ref{sec:caveats}).
+  \item A cautionary demonstration that an end-to-end \emph{learned}
+    (distillation-trained) patch reaches perplexity parity with uniform-4 at
+    lower memory yet \emph{collapses} on task accuracy, below even the
+    unpatched base---perplexity here does not merely understate damage, it
+    inverts the ranking (Sec.~\ref{sec:learned}).
 \end{itemize}
 
 \section{Related Work}
@@ -160,9 +165,11 @@ for isolating what task conditioning actually buys.
 
 \paragraph{Adapters.} Precision patches are structurally analogous to
 LoRA~\cite{hu2021lora}: a frozen base plus small swappable task modules. The
-distinction is that patches add no parameters and store a quantized residual
-rather than a learned low-rank update. We deliberately avoid learned patches to
-keep the comparison to uniform quantization clean.
+distinction is that a restored patch adds no parameters and stores a quantized
+residual rather than a learned low-rank update. Our main comparison to uniform
+quantization uses such training-free patches to keep the setting clean; we then
+test a \emph{learned} (distillation-trained) variant in isolation
+(Sec.~\ref{sec:learned}), where it exposes a metric trap rather than a gain.
 
 \section{Method}
 \label{sec:method}
@@ -609,16 +616,25 @@ Task-conditional precision patches are a real, statistically decisive mechanism
 that nonetheless does not beat the simplest baseline of spending bits
 uniformly. Their genuine value is geometric: they, and cheap per-layer-type
 mixed precision, fill the sub-integer-\bpw{} bands that integer-only uniform
-quantization cannot occupy, and a mixed-precision base plus a small 3-bit patch
-ties uniform 4-bit at lower memory on both perplexity and GSM8K accuracy. The
-robust, deployable win is the mixed-precision base itself. Equally important
-are the guardrails the study produced: a noise-ceiling methodology for
-task-sensitivity claims, a demonstration that perplexity understates
-quantization damage by roughly an order of magnitude, and a quantification of
+quantization cannot occupy, and a mixed-precision base plus a small
+\emph{restored} 3-bit patch ties uniform 4-bit at lower memory on both
+perplexity and GSM8K accuracy (Sec.~\ref{sec:frontier}). The robust, deployable
+win is the mixed-precision base itself. The task \emph{conditioning}, the
+premise of swappability, does not pay: a universal patch works as well as
+per-task ones. And the most seductive extension---replacing restoration with an
+end-to-end learned patch---is a trap: it wins on perplexity and loses on
+accuracy, ending below the unpatched base.
+
+Equally important are the guardrails the study produced: a noise-ceiling
+methodology for task-sensitivity claims; a demonstration that perplexity
+understates quantization damage by roughly an order of magnitude---and, for the
+learned patch, inverts the ranking outright; and a quantification of
 calibration-seed variance that retroactively bounds which small ``wins'' in
-this space are real. We release everything, including the negative results, in
-the hope that the matched-memory, noise-ceiling, accuracy-first discipline is
-as useful as any single number.
+this space are real. If there is one transferable lesson, it is the discipline
+itself: compare at matched memory, interpret overlap against a noise ceiling,
+and never let a perplexity number stand as a capability claim without a
+downstream check. We release everything, including the negative results and the
+retracted claims, in that spirit.
 
 \paragraph{Reproducibility.} All code, experiment scripts, result files, and
 the full record of retracted claims are available at
