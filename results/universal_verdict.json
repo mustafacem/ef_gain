@@ -1,0 +1,25 @@
+{
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "budget_frac": 0.05,
+  "patch_coverage": 0.2514423076923077,
+  "ppl": {
+    "base_mix43": 5.96153693459854,
+    "base+universal_patch": 5.030036392457432,
+    "uniform4": 4.758257189980712,
+    "fp16": 4.492287536332493
+  },
+  "bits": {
+    "base_mix43": 3.373076923076923,
+    "base+universal_patch": 4.198076923076923,
+    "uniform4": 4.25,
+    "fp16": 16.0
+  },
+  "gsm8k": {
+    "base_mix43": 0.16,
+    "base+universal_patch": 0.17,
+    "uniform4": 0.175,
+    "fp16": 0.345
+  },
+  "patch_beats_uniform4_p": 0.4055,
+  "patch_ge_uniform4_p": 0.465
+}

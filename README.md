@@ -43,6 +43,19 @@ Run on Qwen2.5-0.5B / 1.5B / 7B-Instruct on a single 6 GB laptop GPU.
 5. **What didn't:** solve/quantize iteration, residual-aware re-selection,
    attention-weighted budget allocation, and scaling past 0.5B — all rejected
    with evidence. See SUMMARY.md §2 for four retracted claims and why.
+6. **Task conditioning doesn't pay** — a *universal* patch works as well as
+   per-task ones; a math patch transfers to code as well as code's own patch.
+   The mix43 base + a *universal* 3-bit patch ties uniform-4 on GSM8K accuracy
+   at slightly lower memory (`results/universal_verdict.json`).
+7. **Learned patches are a perplexity mirage** — a distillation-trained patch
+   reaches perplexity parity with uniform-4 yet *collapses* on GSM8K accuracy
+   (8.5%, below the unpatched base's 12.5%). The sharpest instance of finding
+   (headline): optimizing perplexity actively harmed task capability. See
+   `results/report/learned_patch_findings.md`.
+
+The paper (`paper/precision_patches.tex`) is the full write-up; the single most
+transferable result is that **perplexity can rank quantization methods
+backwards**, so every quality claim here is checked on downstream accuracy.
 
 ## Layout
 
