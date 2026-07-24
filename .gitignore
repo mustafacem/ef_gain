@@ -34,3 +34,4 @@ paper/compile*.log
 # Large regenerable weight checkpoints (>100MB, rebuild via scripts/learned_patch.py SQ_SAVE_WEIGHTS=1)
 results/*.pt
 results/*_weights.pt
+paper/figs/*.png

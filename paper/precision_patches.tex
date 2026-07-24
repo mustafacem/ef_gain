@@ -8,6 +8,7 @@
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\graphicspath{{figs/}}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{url}
@@ -346,8 +347,8 @@ not, in practice, in its \emph{payoff}.
 
 \subsection{The Pareto frontier, measured in accuracy}
 \label{sec:frontier}
-Table~\ref{tab:frontier} reports GSM8K accuracy across configurations spanning
-2.25--5.25 \bpw{}. Three regimes emerge.
+Table~\ref{tab:frontier} and Fig.~\ref{fig:frontier} report GSM8K accuracy
+across configurations spanning 2.25--5.25 \bpw{}. Three regimes emerge.
 
 \begin{table}[t]
 \centering
@@ -377,6 +378,18 @@ fp16 (reference) & 16.000 & 34.5\% \\
 \end{tabular}
 \end{table}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\linewidth]{fig_frontier.pdf}
+\caption{The quality/memory frontier in \emph{GSM8K accuracy} (not perplexity).
+Uniform quantization exists only at integer bit-widths (squares); the shaded
+$3.25$--$4.25$ \bpw{} band is therefore reachable only by mixed precision
+(triangles) and patches (circles). At the integer rungs uniform is competitive
+(\code{mix43+patch} $23.0\%$ vs.\ uniform-4 $23.5\%$, a tie at lower memory);
+below $3.25$ \bpw{} every configuration collapses to chance.}
+\label{fig:frontier}
+\end{figure}
+
 \textbf{Below 3.25 \bpw{}: nothing works.} Every configuration on a 2-bit base
 scores at chance (0.5--1.5\%). The 2-bit base is too destroyed for any
 affordable correction to rescue; \code{mix32+pb3} at 3.198 \bpw{} is actually
@@ -391,11 +404,19 @@ patches at every interior point.} Because uniform quantization is integer-only,
 it simply does not exist between 3.25 and 4.25 \bpw{}; the band belongs to
 \code{mix43} and \code{mix43+pb3}.
 
-\textbf{At the integer rungs, uniform is competitive.} \code{mix43+pb3}
-(4.198 \bpw{}) reaches 23.0\% versus uniform 4-bit's 23.5\% (4.250 \bpw{})---a
-statistical tie ($p{=}0.406$ by paired bootstrap) at lower memory. The same
-holds in perplexity ($p{=}0.406$), so the parity claim is confirmed under two
-independent metrics.
+\textbf{At the integer rungs, uniform is competitive, and a patch just reaches
+it at slightly lower memory.} \code{mix43+pb3} (4.198 \bpw{}) reaches 23.0\%
+versus uniform 4-bit's 23.5\% (4.250 \bpw{})---a statistical tie ($p{=}0.406$
+by paired bootstrap) at lower memory, and the tie holds in perplexity too. This
+is the one deployable positive configuration the study produces, and it holds
+with a \emph{universal} patch, not only a task-specific one: replacing the
+per-task patch with a pooled-calibration patch on the same base gives $17.0\%$
+vs.\ uniform-4's $17.5\%$ ($p{=}0.47$, indistinguishable) at $4.198$ vs.\ $4.250$
+\bpw{} in a separate run---consistent with Sec.~\ref{sec:crosstask} that task
+conditioning is unnecessary. The saving is real but modest ($\sim$1\% of
+memory), and the efficient ingredient is the mixed-precision \emph{base}: it
+alone reaches $16.0\%$ at $3.37$ \bpw{}, and the patch spends $0.8$ further
+bits to add a single accuracy point.
 
 \subsection{Patch precision: 3-bit, not \code{fp16}}
 \label{sec:precision}
@@ -532,6 +553,19 @@ fp16 & --- & 4.49 & 34.5\% \\
 \end{tabular}
 \end{table}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.86\linewidth]{fig_mirage.pdf}
+\caption{The learned-patch mirage on math. \emph{Left:} by perplexity, the
+learned patch (4.77) is second only to fp16 and essentially ties uniform-4
+(4.73) at lower memory. \emph{Right:} by GSM8K accuracy it is the worst
+usable configuration---below the unpatched base. KL distillation optimised the
+output distribution on calibration text while destroying the reasoning the task
+needs; perplexity here does not understate damage, it \emph{inverts} the
+ranking.}
+\label{fig:mirage}
+\end{figure}
+
 The lesson is not that learned patches are inherently useless---a
 distillation objective aligned with the downstream task, rather than raw KL on
 generic text, might behave differently. It is that \emph{a perplexity-optimised
@@ -581,11 +615,24 @@ uniform 3-bit & $+31.3\%$ & $-75.4\%$ \\
 \end{tabular}
 \end{table}
 
-Config ordering is identical under both metrics, so \emph{comparative}
-conclusions in this paper (and in PTQ work generally) are safe. But absolute
-``gap closed'' or ``$X\%$ recovered'' figures reported in perplexity---ubiquitous
-in the quantization literature---overstate how much task capability survives.
-We recommend downstream accuracy as a primary metric for sub-4-bit claims.
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\linewidth]{fig_ppl_vs_acc.pdf}
+\caption{Perplexity understates task damage by roughly an order of magnitude.
+Each configuration's perplexity increase over fp16 (blue) is dwarfed by its
+GSM8K accuracy loss (orange): uniform 4-bit costs only $+2.8\%$ perplexity but
+$-32\%$ accuracy. A quantization ``recovery'' figure reported in perplexity is
+systematically optimistic about surviving capability.}
+\label{fig:pplacc}
+\end{figure}
+
+Config ordering is identical under both metrics (Fig.~\ref{fig:pplacc}), so
+\emph{comparative} conclusions in this paper (and in PTQ work generally) are
+safe---with the exception of Sec.~\ref{sec:learned}, where a learned patch
+inverts the ranking. But absolute ``gap closed'' or ``$X\%$ recovered''
+figures reported in perplexity---ubiquitous in the quantization
+literature---overstate how much task capability survives. We recommend
+downstream accuracy as a primary metric for sub-4-bit claims.
 
 \subsection{Calibration-seed variance}
 Re-running the composite configuration across three disjoint calibration draws
