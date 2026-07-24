@@ -9,6 +9,14 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \graphicspath{{figs/}}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.16}
+% Okabe-Ito, colour-vision-deficiency safe (drawn natively so figures always
+% render -- no external image files to go missing).
+\definecolor{okblue}{HTML}{0072B2}
+\definecolor{okgreen}{HTML}{009E73}
+\definecolor{okorange}{HTML}{E69F00}
+\definecolor{okverm}{HTML}{D55E00}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{url}
@@ -251,12 +259,41 @@ buying $\sim$14\% more coverage.
 \section{Experimental Setup}
 \label{sec:setup}
 
-\paragraph{Models and surface.} Qwen2.5-Instruct at 0.5B, 1.5B, and 7B. Unless
-stated, experiments quantize the \emph{full surface}: all seven linear
-projection types (\code{q,k,v,o,gate,up,down}), 358M weights for the 0.5B
-model. Prior iterations that quantized only \code{o\_proj}$+$\code{down\_proj}
-(35\% of weights) left the rest in \code{fp16} and thereby inflated quality;
-all headline numbers here use the full surface.
+\paragraph{Models and surface.} All models are Qwen2.5-Instruct. Every headline
+result---the task-sensitivity atlas (Sec.~\ref{sec:atlas}), cross-task transfer
+(Sec.~\ref{sec:crosstask}), the Pareto frontier and precision/allocation
+ablations (Sec.~\ref{sec:results}), the learned-patch experiment
+(Sec.~\ref{sec:learned}), the measurement caveats (Sec.~\ref{sec:caveats}), and
+all GSM8K accuracy---is on \textbf{Qwen2.5-0.5B-Instruct}. The scale diagnostic
+(Sec.~\ref{sec:scale}) alone additionally uses \textbf{Qwen2.5-1.5B-Instruct}
+and \textbf{Qwen2.5-7B-Instruct}; the 7B model, which exceeds the 6\,GB test
+GPU, is quantized and scored one transformer block at a time (peak 0.59\,GB).
+Table~\ref{tab:models} lists the model per experiment. Unless stated,
+experiments quantize the \emph{full surface}: all seven linear projection types
+(\code{q,k,v,o,gate,up,down}), 358M weights for the 0.5B model. Prior iterations
+that quantized only \code{o\_proj}$+$\code{down\_proj} (35\% of weights) left the
+rest in \code{fp16} and thereby inflated quality; all headline numbers here use
+the full surface.
+
+\begin{table}[t]
+\centering
+\caption{Model used per experiment. All quality/accuracy claims are on
+Qwen2.5-0.5B-Instruct; only the structural scale diagnostic uses larger models.}
+\label{tab:models}
+\begin{tabular}{ll}
+\toprule
+Experiment / section & Model(s) \\
+\midrule
+Task-sensitivity atlas (\S\ref{sec:atlas}) & Qwen2.5-0.5B-Instruct \\
+Cross-task transfer (\S\ref{sec:crosstask}) & Qwen2.5-0.5B-Instruct \\
+Pareto frontier, PPL + GSM8K (\S\ref{sec:frontier}) & Qwen2.5-0.5B-Instruct \\
+Patch precision / allocation (\S\ref{sec:precision}--\ref{sec:vsmixed}) & Qwen2.5-0.5B-Instruct \\
+Learned patch + GSM8K (\S\ref{sec:learned}) & Qwen2.5-0.5B-Instruct \\
+Measurement caveats (\S\ref{sec:caveats}) & Qwen2.5-0.5B-Instruct \\
+Scale diagnostic (\S\ref{sec:scale}) & Qwen2.5-0.5B / 1.5B / 7B-Instruct \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \paragraph{Data.} Four tasks: code (MBPP; calibration from CodeParrot), math
 (GSM8K), knowledge (ARC-Easy), and general text (WikiText-2). Calibration uses
@@ -380,13 +417,38 @@ fp16 (reference) & 16.000 & 34.5\% \\
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.82\linewidth]{fig_frontier.pdf}
-\caption{The quality/memory frontier in \emph{GSM8K accuracy} (not perplexity).
-Uniform quantization exists only at integer bit-widths (squares); the shaded
-$3.25$--$4.25$ \bpw{} band is therefore reachable only by mixed precision
-(triangles) and patches (circles). At the integer rungs uniform is competitive
-(\code{mix43+patch} $23.0\%$ vs.\ uniform-4 $23.5\%$, a tie at lower memory);
-below $3.25$ \bpw{} every configuration collapses to chance.}
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.86\linewidth, height=6.0cm,
+  xlabel={effective bits / weight}, ylabel={GSM8K accuracy (\%)},
+  xmin=2.0, xmax=5.5, ymin=-2, ymax=38,
+  grid=major, grid style={black!12},
+  axis lines=left, tick label style={font=\footnotesize},
+  label style={font=\small},
+  legend style={draw=none, font=\footnotesize, at={(0.02,0.98)}, anchor=north west},
+]
+\fill[okorange!12] (axis cs:3.25,-2) rectangle (axis cs:4.25,38);
+\addplot[black, dashed, thick, forget plot] coordinates {(2,34.5) (5.5,34.5)};
+\node[font=\scriptsize, anchor=south east] at (axis cs:5.45,34.6) {fp16 ceiling};
+\addplot[only marks, mark=square*, mark size=2.4pt, okblue]
+  coordinates {(2.25,1.0) (3.25,8.5) (4.25,23.5) (5.25,34.5)};
+\addlegendentry{uniform}
+\addplot[only marks, mark=triangle*, mark size=3pt, okgreen]
+  coordinates {(2.373,1.5) (3.373,12.5) (4.373,31.0)};
+\addlegendentry{mixed precision}
+\addplot[only marks, mark=*, mark size=2.4pt, okorange]
+  coordinates {(3.198,0.5) (4.198,23.0) (5.198,30.5)};
+\addlegendentry{mixed + patch}
+\node[font=\scriptsize, text=black!55, align=center] at (axis cs:3.75,5)
+  {integer uniform\\cannot occupy};
+\end{axis}
+\end{tikzpicture}
+\caption{The quality/memory frontier in \emph{GSM8K accuracy} (not perplexity),
+on Qwen2.5-0.5B-Instruct. Uniform quantization exists only at integer
+bit-widths (squares); the shaded $3.25$--$4.25$ \bpw{} band is reachable only by
+mixed precision (triangles) and patches (circles). At the integer rungs uniform
+is competitive---\code{mix43+patch} $23.0\%$ vs.\ uniform-4 $23.5\%$, a tie at
+lower memory; below $3.25$ \bpw{} every configuration collapses to chance.}
 \label{fig:frontier}
 \end{figure}
 
@@ -555,14 +617,49 @@ fp16 & --- & 4.49 & 34.5\% \\
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.86\linewidth]{fig_mirage.pdf}
-\caption{The learned-patch mirage on math. \emph{Left:} by perplexity, the
-learned patch (4.77) is second only to fp16 and essentially ties uniform-4
-(4.73) at lower memory. \emph{Right:} by GSM8K accuracy it is the worst
-usable configuration---below the unpatched base. KL distillation optimised the
-output distribution on calibration text while destroying the reasoning the task
-needs; perplexity here does not understate damage, it \emph{inverts} the
-ranking.}
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.5\linewidth, height=5.0cm,
+  ymin=4.3, ymax=5.75, ylabel={perplexity (lower better)},
+  xmin=0.4, xmax=4.6, xtick={1,2,3,4},
+  xticklabels={base, learned, uni-4, fp16},
+  x tick label style={font=\scriptsize}, tick label style={font=\footnotesize},
+  label style={font=\small}, title={\small what perplexity says},
+  grid=major, grid style={black!10}, axis lines=left,
+  nodes near coords, nodes near coords style={font=\scriptsize},
+  every node near coord/.append style={/pgf/number format/fixed,/pgf/number format/precision=2},
+]
+\addplot[ybar, bar width=15pt, bar shift=0pt, fill=okgreen, draw=none] coordinates {(1,5.51)};
+\addplot[ybar, bar width=15pt, bar shift=0pt, fill=okverm,  draw=none] coordinates {(2,4.77)};
+\addplot[ybar, bar width=15pt, bar shift=0pt, fill=okblue,  draw=none] coordinates {(3,4.73)};
+\addplot[ybar, bar width=15pt, bar shift=0pt, fill=black,   draw=none] coordinates {(4,4.49)};
+\end{axis}
+\end{tikzpicture}\hfill
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.5\linewidth, height=5.0cm,
+  ymin=0, ymax=40, ylabel={GSM8K accuracy (\%)},
+  xmin=0.4, xmax=4.6, xtick={1,2,3,4},
+  xticklabels={base, learned, uni-4, fp16},
+  x tick label style={font=\scriptsize}, tick label style={font=\footnotesize},
+  label style={font=\small}, title={\small what accuracy says},
+  grid=major, grid style={black!10}, axis lines=left,
+  nodes near coords, nodes near coords style={font=\scriptsize},
+  every node near coord/.append style={/pgf/number format/fixed,/pgf/number format/precision=1},
+]
+\addplot[ybar, bar width=15pt, bar shift=0pt, fill=okgreen, draw=none] coordinates {(1,12.5)};
+\addplot[ybar, bar width=15pt, bar shift=0pt, fill=okverm,  draw=none] coordinates {(2,8.5)};
+\addplot[ybar, bar width=15pt, bar shift=0pt, fill=okblue,  draw=none] coordinates {(3,23.5)};
+\addplot[ybar, bar width=15pt, bar shift=0pt, fill=black,   draw=none] coordinates {(4,34.5)};
+\end{axis}
+\end{tikzpicture}
+\caption{The learned-patch mirage (Qwen2.5-0.5B-Instruct, math). \emph{Left:} by
+perplexity, the learned patch (4.77) is second only to fp16 and essentially ties
+uniform-4 (4.73) at lower memory. \emph{Right:} by GSM8K accuracy it is the
+worst usable configuration---below the unpatched base (8.5\% vs.\ 12.5\%). KL
+distillation optimised the output distribution on calibration text while
+destroying the reasoning the task needs; here perplexity does not understate
+damage, it \emph{inverts} the ranking.}
 \label{fig:mirage}
 \end{figure}
 
@@ -617,12 +714,35 @@ uniform 3-bit & $+31.3\%$ & $-75.4\%$ \\
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.82\linewidth]{fig_ppl_vs_acc.pdf}
-\caption{Perplexity understates task damage by roughly an order of magnitude.
-Each configuration's perplexity increase over fp16 (blue) is dwarfed by its
-GSM8K accuracy loss (orange): uniform 4-bit costs only $+2.8\%$ perplexity but
-$-32\%$ accuracy. A quantization ``recovery'' figure reported in perplexity is
-systematically optimistic about surviving capability.}
+\begin{tikzpicture}
+\begin{axis}[
+  xbar, width=0.80\linewidth, height=5.4cm,
+  xmin=0, xmax=88,
+  xlabel={degradation from fp16 (\%)},
+  symbolic y coords={uniform 3-bit, mixed attn@4/mlp@3, mix43+patch, uniform 4-bit},
+  ytick=data,
+  bar width=6pt,
+  enlarge y limits=0.22,
+  nodes near coords, nodes near coords style={font=\scriptsize},
+  nodes near coords align={horizontal},
+  every node near coord/.append style={/pgf/number format/precision=0, /pgf/number format/fixed},
+  grid=major, grid style={black!10}, axis lines=left,
+  tick label style={font=\footnotesize}, label style={font=\small},
+  legend style={draw=none, font=\footnotesize, at={(0.98,0.97)}, anchor=north east},
+]
+\addplot[fill=okblue, draw=none] coordinates
+  {(2.8,uniform 4-bit) (10.6,mix43+patch) (19.7,mixed attn@4/mlp@3) (31.3,uniform 3-bit)};
+\addplot[fill=okverm, draw=none] coordinates
+  {(31.9,uniform 4-bit) (33.3,mix43+patch) (63.8,mixed attn@4/mlp@3) (75.4,uniform 3-bit)};
+\legend{perplexity increase, GSM8K accuracy lost}
+\end{axis}
+\end{tikzpicture}
+\caption{Perplexity understates task damage by roughly an order of magnitude
+(Qwen2.5-0.5B-Instruct, math). Each configuration's perplexity increase over
+fp16 (blue) is dwarfed by its GSM8K accuracy loss (orange): uniform 4-bit costs
+only $+2.8\%$ perplexity but $-32\%$ accuracy. A quantization ``recovery''
+figure reported in perplexity is systematically optimistic about surviving
+capability.}
 \label{fig:pplacc}
 \end{figure}
 
