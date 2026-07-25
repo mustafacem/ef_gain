@@ -164,13 +164,19 @@ conditioning. Our patches are group-level, task-conditional, and swappable; we
 find, however, that much of their benefit coincides with per-layer-type mixed
 precision (Sec.~\ref{sec:vsmixed}), which situates the contribution precisely.
 
-\paragraph{Task-aware quantization.} Recent work allocates bit-widths per layer
-from task-specific relevance scores, showing sensitivity is task-dependent, but
-produces one static model per task. Our design differs in artifact: a single
-shared base plus $N$ cheap swappable patches, at group rather than layer
-granularity. Our controlled comparison against a task-\emph{calibrated} base
-(Sec.~\ref{sec:vsmixed}) is, to our knowledge, not standard and is essential
-for isolating what task conditioning actually buys.
+\paragraph{Task-aware quantization.} Closest to our motivation is
+TAQ~\cite{levi2025taq}, a training-free mixed-precision PTQ framework that
+scores \emph{layer} importance from task-specific calibration prompts and
+allocates higher precision to task-relevant layers, producing one quantized
+model per task. Our design differs in artifact and granularity: a single shared
+base plus $N$ cheap swappable patches, at weight-group rather than layer
+granularity. It also differs in what we conclude---we find that the task
+conditioning itself does not pay (Sec.~\ref{sec:crosstask}), which a
+per-task-model formulation cannot easily reveal, because it never asks whether
+one \emph{universal} artifact would have sufficed. Our controlled comparisons
+against a task-\emph{calibrated} base (Sec.~\ref{sec:vsmixed}) and a pooled
+patch are, to our knowledge, not standard and are essential for isolating what
+task conditioning actually buys.
 
 \paragraph{Adapters.} Precision patches are structurally analogous to
 LoRA~\cite{hu2021lora}: a frozen base plus small swappable task modules. The
@@ -828,7 +834,8 @@ the full record of retracted claims are available at
   Pre-trained Transformers.
   \newblock \emph{ICLR}, 2023. arXiv:2210.17323.
 
-\bibitem{lin2023awq} J.~Lin, J.~Tang, H.~Tang, S.~Yang, X.~Dang, and S.~Han.
+\bibitem{lin2023awq} J.~Lin, J.~Tang, H.~Tang, S.~Yang, W.-M.~Chen,
+  W.-C.~Wang, G.~Xiao, X.~Dang, C.~Gan, and S.~Han.
   \newblock AWQ: Activation-aware Weight Quantization for LLM Compression and
   Acceleration.
   \newblock \emph{MLSys}, 2024. arXiv:2306.00978.
@@ -858,6 +865,12 @@ the full record of retracted claims are available at
 \bibitem{lecun1989obd} Y.~LeCun, J.~S.~Denker, and S.~A.~Solla.
   \newblock Optimal Brain Damage.
   \newblock \emph{NeurIPS}, 1989.
+
+\bibitem{levi2025taq} A.~LeVi, R.~Lapid, R.~Himelstein, C.~Baskin,
+  R.~Shwartz-Ziv, and A.~Mendelson.
+  \newblock You Had One Job: Per-Task Quantization Using LLMs' Hidden
+  Representations.
+  \newblock arXiv:2511.06516, 2025.
 \end{thebibliography}
 
 \end{document}
