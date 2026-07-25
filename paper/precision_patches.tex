@@ -259,8 +259,9 @@ buying $\sim$14\% more coverage.
 \section{Experimental Setup}
 \label{sec:setup}
 
-\paragraph{Models and surface.} All models are Qwen2.5-Instruct. Every headline
-result---the task-sensitivity atlas (Sec.~\ref{sec:atlas}), cross-task transfer
+\paragraph{Models and surface.} All models come from the Qwen2.5-Instruct
+family. Every headline result---the sensitivity atlas
+(Sec.~\ref{sec:atlas}), cross-task transfer
 (Sec.~\ref{sec:crosstask}), the Pareto frontier and precision/allocation
 ablations (Sec.~\ref{sec:results}), the learned-patch experiment
 (Sec.~\ref{sec:learned}), the measurement caveats (Sec.~\ref{sec:caveats}), and
@@ -271,9 +272,9 @@ GPU, is quantized and scored one transformer block at a time (peak 0.59\,GB).
 Table~\ref{tab:models} lists the model per experiment. Unless stated,
 experiments quantize the \emph{full surface}: all seven linear projection types
 (\code{q,k,v,o,gate,up,down}), 358M weights for the 0.5B model. Prior iterations
-that quantized only \code{o\_proj}$+$\code{down\_proj} (35\% of weights) left the
-rest in \code{fp16} and thereby inflated quality; all headline numbers here use
-the full surface.
+that quantized only \code{o\_proj} and \code{down\_proj} (35\% of weights) left
+the rest in \code{fp16} and thereby inflated quality; all headline numbers here
+use the full surface.
 
 \begin{table}[t]
 \centering
@@ -309,7 +310,14 @@ accuracy (200 problems, 4-shot, greedy). Significance by paired bootstrap
 ($N{=}4000$) over evaluation items. \emph{Every configuration is reported with
 its effective \bpw{}}; no comparison is made at unequal cost. This discipline
 was necessary: three distinct confounds in preliminary work arose from
-comparing configurations at unequal memory.
+comparing configurations at unequal memory. One further caution applies to the
+reader: absolute perplexities are \emph{not} comparable across our tables,
+because evaluation sequence length differs between experiments (2048 tokens in
+the frontier and ablation runs, 256 in the training-based runs, which must fit
+a 6\,GB GPU alongside a teacher). Perplexity rises with shorter contexts, so a
+configuration can read $3.83$ in one table and $5.51$ in another. Every
+comparison we draw---and every significance test---is \emph{within} a single
+run, where all configurations share an identical evaluation.
 
 \paragraph{Reproducibility.} Fake quantization (dequantized values held in
 \code{fp16}); we measure memory and quality, and claim no wall-clock speedup.
@@ -523,12 +531,14 @@ dominates.
 \subsection{Scale: no free lunch}
 \label{sec:scale}
 We measured the uniform-vs-patch per-bit efficiency ratio at matched depth on
-attention layers across 0.5B, 1.5B, and 7B. It is flat: $1.05\times$,
-$0.97\times$, $1.12\times$ respectively (values $<1$ favor patches). Layer-to-
-layer variance within a single model exceeds the variation across a
-$14\times$ range of model sizes. An earlier report of a ``scale-gated'' effect
-was retracted: it compared \code{fp16} patches at 0.5B against a hybrid at 1.5B,
-i.e.\ different designs, not different scales.
+attention layers across 0.5B, 1.5B, and 7B, \emph{using the best variable-bit
+patch at each scale} so the comparison is design-matched. It is flat:
+$1.05\times$, $0.97\times$, $1.12\times$ respectively (values $<1$ favor
+patches). Layer-to-layer variance within a single model exceeds the variation
+across a $14\times$ range of model sizes. An earlier report of a
+``scale-gated'' effect was retracted: it compared \code{fp16} patches at 0.5B
+against a hybrid at 1.5B, i.e.\ different designs, not different scales---the
+same trap that makes the design-matching above essential.
 
 \section{What Did Not Work}
 \label{sec:negative}
@@ -580,8 +590,10 @@ like a solved patch, at identical bytes.
 \paragraph{Perplexity says: breakthrough.} Trained to convergence on math, the
 learned patch reaches \emph{perplexity parity} with uniform-4 at 19\% lower
 memory (Table~\ref{tab:learned}, 4.77 vs.\ 4.73 at 3.43 vs.\ 4.25 \bpw{}). It
-beats the restored patch decisively, quantizing the trained delta to 3 bits is
-free ($<0.02$ ppl), and the improvement grows monotonically with training data
+beats the restored patch decisively---in a matched run where the restored patch
+scored $5.97$ against a base of $5.85$, i.e.\ restoration \emph{hurt} while the
+learned patch helped---quantizing the trained delta to 3 bits is free
+($<0.02$ ppl), and the improvement grows monotonically with training data
 ($5.11 \to 4.97 \to 4.77$). By every perplexity measure this is the win the
 whole method was after.
 
@@ -599,15 +611,18 @@ task accuracy \emph{worse}.
 memory, yet collapses on GSM8K accuracy---below even the unpatched base. This
 is the perplexity/accuracy divergence of Sec.~\ref{sec:caveats} in its most
 extreme form: on perplexity the learned patch looks like a clear win; on
-accuracy it is worse than doing nothing. (Base and uniform-4 accuracies match
-the independent measurements of Sec.~\ref{sec:frontier} exactly.)}
+accuracy it is worse than doing nothing. All rows come from a single run, so
+they are directly comparable; base and uniform-4 accuracies match the
+independent measurements of Sec.~\ref{sec:frontier} exactly. Absolute
+perplexities are not comparable across tables in this paper because evaluation
+sequence length differs between runs (see Sec.~\ref{sec:setup}); every
+comparison we draw is within a run.}
 \label{tab:learned}
 \begin{tabular}{lrrr}
 \toprule
 config (math) & \bpw{} & perplexity & GSM8K acc. \\
 \midrule
 base (mixed attn@4/MLP@3) & 3.37 & 5.51 & 12.5\% \\
-solved (restored) patch & 3.43 & 5.97 & --- \\
 \textbf{learned patch} & \textbf{3.43} & \textbf{4.77} & \textbf{8.5\%} \\
 uniform-4 & 4.25 & 4.73 & 23.5\% \\
 fp16 & --- & 4.49 & 34.5\% \\
@@ -811,34 +826,34 @@ the full record of retracted claims are available at
 \bibitem{frantar2022gptq} E.~Frantar, S.~Ashkboos, T.~Hoefler, and D.~Alistarh.
   \newblock GPTQ: Accurate Post-Training Quantization for Generative
   Pre-trained Transformers.
-  \newblock \emph{ICLR}, 2023.
+  \newblock \emph{ICLR}, 2023. arXiv:2210.17323.
 
 \bibitem{lin2023awq} J.~Lin, J.~Tang, H.~Tang, S.~Yang, X.~Dang, and S.~Han.
   \newblock AWQ: Activation-aware Weight Quantization for LLM Compression and
   Acceleration.
-  \newblock \emph{MLSys}, 2024.
+  \newblock \emph{MLSys}, 2024. arXiv:2306.00978.
 
 \bibitem{dettmers2022int8} T.~Dettmers, M.~Lewis, Y.~Belkada, and
   L.~Zettlemoyer.
   \newblock LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale.
-  \newblock \emph{NeurIPS}, 2022.
+  \newblock \emph{NeurIPS}, 2022. arXiv:2208.07339.
 
 \bibitem{dettmers2023spqr} T.~Dettmers, R.~Svirschevski, V.~Egiazarian,
   D.~Kuznedelev, E.~Frantar, S.~Ashkboos, A.~Borzunov, T.~Hoefler, and
   D.~Alistarh.
   \newblock SpQR: A Sparse-Quantized Representation for Near-Lossless LLM Weight
   Compression.
-  \newblock \emph{ICLR}, 2024.
+  \newblock \emph{ICLR}, 2024. arXiv:2306.03078.
 
 \bibitem{kim2023squeezellm} S.~Kim, C.~Hooper, A.~Gholami, Z.~Dong, X.~Li,
   S.~Shen, M.~Mahoney, and K.~Keutzer.
   \newblock SqueezeLLM: Dense-and-Sparse Quantization.
-  \newblock \emph{ICML}, 2024.
+  \newblock \emph{ICML}, 2024. arXiv:2306.07629.
 
 \bibitem{hu2021lora} E.~J.~Hu, Y.~Shen, P.~Wallis, Z.~Allen-Zhu, Y.~Li,
   S.~Wang, L.~Wang, and W.~Chen.
   \newblock LoRA: Low-Rank Adaptation of Large Language Models.
-  \newblock \emph{ICLR}, 2022.
+  \newblock \emph{ICLR}, 2022. arXiv:2106.09685.
 
 \bibitem{lecun1989obd} Y.~LeCun, J.~S.~Denker, and S.~A.~Solla.
   \newblock Optimal Brain Damage.
