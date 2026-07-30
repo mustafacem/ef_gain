@@ -35,3 +35,12 @@ paper/compile*.log
 results/*.pt
 results/*_weights.pt
 paper/figs/*.png
+
+# JAIR build artifacts + vendored fonts (regenerate: see paper/jair/README.md)
+paper/jair/*.pdf
+paper/jair/*.bbl
+paper/jair/*.blg
+paper/jair/*.aux
+paper/jair/*.log
+paper/jair/*.out
+paper/jair/*.otf
